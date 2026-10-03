@@ -99,7 +99,8 @@ class Promptly < Formula
 
   test do
     assert_equal "promptly #{version}", shell_output("#{bin}/promptly --version").strip
-    source = shell_output("#{bin}/promptly --seed homebrew --engine prompt --label brew")
+    # Keep this test portable to Homebrew environments without a UTF-8 locale.
+    source = shell_output("#{bin}/promptly --seed homebrew --engine prompt --label brew --glyphs ascii")
     assert_match "# Promptly", source
     (testpath/"prompt.zsh").write(source)
     system "zsh", "-fn", testpath/"prompt.zsh"

@@ -96,7 +96,8 @@ Selection balances engines and compares spatial occupancy and scale;
 changing only the palette or ASCII fallback does not change the selected seeds.
 The displayed seed reproduces each specimen with `preview` or `export`.
 
-Unicode mode uses single-cell glyphs and no private-use/Nerd Font characters.
+Unicode mode uses single-cell glyphs and no private-use/Nerd Font characters,
+and expects a UTF-8 shell locale.
 The terminal's fonts still need to cover the chosen symbols. `--glyphs ascii`
 uses the same geometry with ASCII substitutions. Colors target dark backgrounds;
 the prompt leaves the terminal background alone. Previews respect `NO_COLOR`.

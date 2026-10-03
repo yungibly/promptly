@@ -49,5 +49,18 @@ try {
     assert.match(displayed.stdout, /\x1b\[/, 'local .env must not turn off preview colors');
     checks += 6;
   }
+  // Unicode previews need UTF-8. The explicit ASCII fallback must also work
+  // in byte-oriented environments, including Homebrew's test sandbox.
+  const ascii = run(['--seed', 'homebrew', '--engine', 'prompt', '--label', 'brew', '--glyphs', 'ascii']);
+  const portable = spawnSync('/bin/zsh', ['-f'], {
+    input: `COLUMNS=80\n${ascii.stdout}\nprint -rP -- "$PROMPT"\npromptly_off\n`,
+    encoding: 'utf8', timeout: 15000,
+    env: { ...environment, PATH: '/no-external-runtime', LC_ALL: 'C', LANG: 'C' },
+  });
+  assert.equal(portable.status, 0, portable.stderr);
+  assert.equal(portable.stderr, '');
+  assert.match(portable.stdout, /brew/);
+  assert.match(portable.stdout, /^[\x00-\x7f]*$/);
+  checks += 4;
   console.log(`PASS ${checks} standalone checks: isolated binary, all engines, empty PATH, source/preview, and config isolation`);
 } finally { rmSync(directory, { recursive: true, force: true }); }
