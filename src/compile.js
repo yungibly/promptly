@@ -7,6 +7,10 @@ const position = ({ at, offset }) => `(${at} * (_pp_w - 1) / 1000 + (${offset}))
 function compileScene({ scene, cursor, rightPrompt }) {
   const lines = [`_pp_height=${scene.rows}`, `_pp_cursor=${cursor}`, `_pp_right=${quoteZsh(rightPrompt)}`];
   for (const run of scene.runs) {
+    if (run.kind === 'wire') {
+      lines.push(`_promptly_wire ${run.from.row} "$(( ${position(run.from.x)} ))" ${run.to.row} "$(( ${position(run.to.x)} ))" ${run.ink} ${quoteZsh(run.charset)}`);
+      continue;
+    }
     const length = [...run.text].length;
     let x = position(run.x);
     if (run.align === 'right') x += ` - ${length - 1}`;

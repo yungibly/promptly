@@ -2,18 +2,27 @@
 
 ## Pipeline
 
-`recipe -> seeded grammar -> responsive cell scene -> zsh compiler -> standalone artwork`
+`recipe -> primitive graph rewrites -> ornament expressions -> responsive cell scene -> zsh compiler -> standalone artwork`
 
 - `src/random.js`: stable integer RNG seeded through SHA-256. Independent streams
   isolate palette, structure, and ornament choices.
-- `src/grammars.js`: composition grammars. Each returns a scene, input cursor column,
-  and a small native right prompt. Inscriptions are entirely fictional/static.
+- `src/primitives.js`: theme-free points, paths, translation, reflection, repetition,
+  and an undirected connection graph. Atomic proposals declare attachment ports.
+- `src/compose.js`: the default generator. Starts with a seeded route and recursively
+  rewrites its segments using detour, loop, branch, fork, stitch, and repeat. The
+  derivation records each operation's parent, depth, paths, and optional removal.
+- `src/ornaments.js`: tiny expression trees: atom, sequence, enclosure, repetition,
+  reflection. Independent alphabets give them character, without prescribing geometry.
+- `src/grammars.js`: registry and the five classic layouts retained for compatibility.
 - `src/scene.js`: ordered text/fill runs. X coordinates are `(per-mille anchor,
   column offset)`. Rows are discrete. A fill's end is exclusive; text supports
-  left/center/right alignment. Later runs overpaint earlier ones, including spaces.
+  left/center/right alignment. A wire run connects two affine vertices and carries a
+  material's 16-glyph connection table. Later text overpaints wires, including spaces.
 - `src/compile.js` and `src/runtime.zsh`: compile scene geometry into calls against
   a temporary zsh cell canvas. Paint, merge colors, then construct normal `PROMPT`
-  and `RPROMPT` values using zsh's native color escapes.
+  and `RPROMPT` values using zsh's native color escapes. Wire strokes union four
+  direction bits per cell; the final mask selects a cap, corner, tee, or crossing.
+  Junctions therefore agree with the actual viewport, including after resize.
 - `src/preview.js`: executes the same source in `zsh -f`; no separate art renderer.
 - `bin/promptly.js`: human/agent CLI, JSON recipes, preview, mutation, export.
 
@@ -62,8 +71,48 @@ this first version is intended to own the prompt in a shell.
 
 All inscriptions are validated static ASCII text; user seed data is JSON-escaped
 in a comment. No shell eval. The IR does not accept arbitrary code or terminal
-escape sequences. Recipe version 1 describes the recipe format; seed stability is
-guaranteed for a given generator revision, not yet across future grammar revisions.
+escape sequences. Version 1 recipes retain the classic grammar fields. Version 2
+adds resolved material, alphabet, symmetry, height, density, and ornament seed for
+the compose engine. The engine implementation is `graph-rewrite/1`. Seed stability
+is guaranteed for a generator revision, not across future algorithm revisions.
+
+## Composition mechanics
+
+Plan on a 41-column logical lattice with 3–11 artwork rows and a separate safe
+input row. Labels reserve a conservative area at the 80-column full-art breakpoint.
+The initial route meanders across the lattice. Every rewrite selects an existing
+horizontal segment, declares contact ports, and proposes paths. Commit only if
+new cells fit the bounds and avoid reservations and unrelated graph cells. A detour
+can remove an old segment only when it would not detach any existing branch.
+Loops/reconnections intentionally add cycles; other proposals add branches or
+replace routes. Repetition translates small paths; mirror reflects the entire
+derived half-graph. Subdivision, enclosure, and nested branching emerge through
+successive small operations, including operations on earlier operations' output.
+
+Each specimen samples rule weights, vertical size, occupancy target, and symmetry.
+Complexity controls the rewrite budget, attempts, and detail budget. Density is a
+stopping target, not a promise of an exact filled percentage: one atomic rewrite
+may cross it, or growth may exhaust available space. A hard attempt budget bounds
+generation. Connectivity, accepted-proposal validity, ancestry, recursion, and
+diversity are covered by replaying 64 seeded derivations in the tests.
+
+Line material is a connection-mask lookup, not geometry. An alphabet is an atom/
+delimiter/separator vocabulary, not a layout. Ornament trees recurse under a cell
+budget and are placed at terminals, inside simple runs, or in unoccupied regions.
+The current implementation is rectilinear: diagonal geometry and truly curved
+routes are future primitives, not merely new glyph alphabets. Reflection currently
+applies to topology; inscriptions deliberately need not be symmetric.
+
+RNG streams are separate for structure, detail, palette, and each trait. Explicitly
+overriding one trait never consumes another trait's random choices. Recipe values
+freeze resolved art direction. `mutate --scope ornament` changes only the detail
+seed; the full structural derivation stays identical. `--scope structure` changes
+the graph seed while retaining the detail seed (placement still follows available
+space in the changed graph). The default `all` varies both seeds.
+
+`inspect --program` emits the recipe plus traits, derivation, ornament ASTs, and
+statistics: vertices, edges, cycles, components, junctions, depth, and operation
+counts. That diagnostic envelope is separate from the reloadable ordinary recipe.
 
 ## Verification
 
@@ -85,8 +134,8 @@ capture could not draw U+27D0/U+27E1, so replace those with supported diamonds.
 
 ## Next experiments
 
-- More generative topology: nested routing, braided channels, hanging structures,
-  broken symmetries. Keep placement collision rules explicit.
+- Additional primitives: diagonal strokes, masks, rotations, sparse disconnected
+  particle fields, non-rectangular enclosures. Preserve explicit contact semantics.
 - A terminal exploration interface that supports keeping and mutating specimens.
 - Palette interpolation with a dark/light contrast model.
 - Optional slow variation per prompt, only if exported runtime stays self-contained
@@ -105,3 +154,13 @@ uses complexity 3 for a shorter everyday version; the gallery deliberately shows
 the maximum ornament budget. The first release passes 14 generator/runtime tests
 and 68 terminal assertions. Captures and the machine-readable terminal report are
 regenerated under `artifacts/terminal/` by `npm run test:terminal`.
+
+## Primitive engine baseline
+
+`docs/primitives.png` captures five `possibility` descendants, complexity 7 and
+height 6, with independently seeded surfaces. `examples/compose.json` preserves
+the first descendant's natural 12-row version. The primitives release adds
+replayable growth, recursive ornaments, real junctions, trait controls, scoped
+mutation, and version-2 recipes. This baseline passes 25 generator/runtime tests
+and 77 Ghostty terminal assertions, including resize and ASCII rendering of the new
+engine. The property tests replay 64 structurally distinct connected derivations.

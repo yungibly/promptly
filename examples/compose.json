@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "seed": "possibility/1",
+  "style": "compose",
+  "palette": "ultraviolet",
+  "complexity": 7,
+  "glyphs": "unicode",
+  "label": "finn",
+  "material": "heavy",
+  "alphabet": "technical",
+  "symmetry": "mirror",
+  "height": 12,
+  "density": 0.442,
+  "ornamentSeed": "possibility/1"
+}

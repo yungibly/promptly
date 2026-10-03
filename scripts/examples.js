@@ -15,3 +15,6 @@ for (const [style, seed, palette, complexity] of examples) {
   writeFileSync(new URL(`../examples/${style}.json`, import.meta.url), JSON.stringify(recipe(design), null, 2) + '\n');
   writeFileSync(new URL(`../examples/${style}.zsh`, import.meta.url), compile(design));
 }
+const composed = createDesign({ seed: 'possibility/1', complexity: 7, label: 'finn' });
+writeFileSync(new URL('../examples/compose.json', import.meta.url), JSON.stringify(recipe(composed), null, 2) + '\n');
+writeFileSync(new URL('../examples/compose.zsh', import.meta.url), compile(composed));

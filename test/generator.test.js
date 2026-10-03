@@ -133,7 +133,7 @@ test('untrusted seeds remain comment data; shell quoting round-trips literal tex
 });
 
 test('invalid recipes and options fail clearly', () => {
-  for (const options of [{ style: '__proto__' }, { palette: 'constructor' }, { complexity: 7 }, { complexity: 1.5 }, { glyphs: 'emoji' }, { label: '' }, { seed: '' }]) {
+  for (const options of [{ style: '__proto__' }, { palette: 'constructor' }, { complexity: 11 }, { complexity: 1.5 }, { glyphs: 'emoji' }, { label: '' }, { seed: '' }]) {
     assert.throws(() => createDesign(options));
   }
   assert.throws(() => fromRecipe({ version: 2 }));
@@ -166,5 +166,26 @@ test('CLI exports a sourceable artifact and refuses accidental replacement', () 
     assert.equal(invoke([...args, '--force']).status, 0);
     assert.equal(zsh(`source ${quoteZsh(file)}\nprint installed\n`), 'installed\n');
     assert.match(readFileSync(file, 'utf8'), /"seed":"cli"/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('CLI saves, scopes a mutation, inspects its program, and reloads a version-2 recipe', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'promptly-program-'));
+  const invoke = (...args) => {
+    const result = spawnSync(process.execPath, ['bin/promptly.js', ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout;
+  };
+  try {
+    const originalPath = join(dir, 'original.json'), variantPath = join(dir, 'detail.json');
+    invoke('inspect', '--seed', 'cli-program', '--complexity', '8', '--out', originalPath);
+    invoke('mutate', '--from', originalPath, '--scope', 'ornament', '--variation', 'leaves', '--out', variantPath);
+    const original = JSON.parse(invoke('inspect', '--from', originalPath, '--program'));
+    const variant = JSON.parse(invoke('inspect', '--from', variantPath, '--program'));
+    assert.equal(variant.recipe.version, 2);
+    assert.deepEqual(variant.derivation, original.derivation);
+    assert.notEqual(variant.recipe.ornamentSeed, original.recipe.ornamentSeed);
+    const source = invoke('export', '--from', variantPath);
+    assert.equal(zsh(`${source}\nprint compiled\n`), 'compiled\n');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

@@ -80,8 +80,8 @@ try {
     console.log(`PASS ${style}: cells, colors, editing, wrapping, right-prompt clearance`);
   }
 
-  const design = createDesign(JSON.parse(readFileSync('examples/reliquary.json', 'utf8')));
-  submit(`source ${quoteZsh(resolve('examples/reliquary.zsh'))}; clear`);
+  const design = createDesign(JSON.parse(readFileSync('examples/compose.json', 'utf8')));
+  submit(`source ${quoteZsh(resolve('examples/compose.zsh'))}; clear`);
   tui('type', 'echo preserved');
   for (const width of [80, 40, 27, 160, 120]) {
     tui('resize', String(width), '24');
@@ -113,14 +113,14 @@ try {
   check(state().text.includes('\nWIDGET:0\n'), 'disabled prompt left its widget registered');
   console.log('PASS live resize, continuation, exit status, and prompt restoration');
 
-  const safe = createDesign({ style: 'reliquary', seed: 'portable', glyphs: 'ascii' });
+  const safe = createDesign({ seed: 'portable', glyphs: 'ascii', complexity: 8 });
   writeFileSync(`${output}/ascii.zsh`, compile(safe));
   submit(`source ${quoteZsh(`${output}/ascii.zsh`)}; clear`);
   check(/^[\x20-\x7e\n]*$/.test(state().text), 'ASCII prompt leaked Unicode');
   snapshot('ascii');
   submit('promptly_off; clear');
   tui('resize', '120', '58');
-  submit('clear; node bin/promptly.js gallery --seed first-contact --label finn --width 120 --complexity 5 --count 5');
+  submit('clear; node bin/promptly.js gallery --seed possibility --label finn --width 120 --height 6 --complexity 7 --count 5');
   snapshot('gallery');
   check(state().text.includes('P R O M P T L Y'), 'gallery did not render');
   writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, styles: Object.keys(grammars), resizeWidths: [80, 40, 27, 160, 120] }, null, 2) + '\n');

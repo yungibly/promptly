@@ -8,6 +8,7 @@ import { preview } from '../src/preview.js';
 import { grammars } from '../src/grammars.js';
 import { palettes } from '../src/palettes.js';
 import { randomSeed } from '../src/random.js';
+import { materials, alphabets } from '../src/ornaments.js';
 
 const help = `
   P R O M P T L Y
@@ -16,27 +17,34 @@ const help = `
   promptly preview [options]       Render a design using its actual zsh runtime
   promptly gallery [options]       Explore a collection of related specimens
   promptly export [options]        Write a standalone, sourceable .zsh prompt
-  promptly inspect [options]       Print the reproducible recipe as JSON
+  promptly inspect [options]       Print a recipe, or --program for its derivation
   promptly mutate [options]        Vary a recipe while preserving its art direction
   promptly styles                 List composition grammars and palettes
 
   --seed TEXT                     Repeatable seed; random when omitted
-  --style NAME                    signal, reliquary, mycelium, orrery, xenoweave
+  --style NAME                    compose (default), or a classic named grammar
   --palette NAME                  phosphor, ultraviolet, ember, abyss
-  --complexity 1..5               Ornament budget (default: 3)
+  --complexity 1..10               Growth/detail budget (default: 3; classic: 1..5)
+  --material NAME                 rounded, square, double, heavy, dashed
+  --alphabet NAME                 geometric, punctuation, technical, granular, runic
+  --symmetry none|mirror           Reflect the grown graph, or keep it asymmetric
+  --height 4..12                   Total rows; otherwise chosen by the seed
+  --density 0.15..0.85             Target fraction of occupied planning cells
   --label TEXT                    Static inscription, up to 20 characters
   --glyphs unicode|ascii           Unicode by default; no Nerd Font required
   --width N                       Preview width (default: terminal width or 100)
   --count N                       Gallery size (default: 5; maximum: 24)
   --from FILE                     Load a saved JSON recipe
   --variation TEXT                Mutation suffix (default: fresh random seed)
+  --scope all|structure|ornament   Mutate independently (default: all)
+  --program                       Inspect primitive operations, ancestry, and stats
   --out FILE                      Export destination; otherwise writes to stdout
   --force                         Allow replacing an existing output file
   --no-color                      Plain previews
   --help                          Show this help
 
-  node bin/promptly.js gallery --seed first-contact --label finn
-  node bin/promptly.js export --style reliquary --seed moth --out moth.zsh
+  node bin/promptly.js gallery --seed possibility --complexity 7 --label finn
+  node bin/promptly.js export --seed moth --out moth.zsh
   source ./moth.zsh
   promptly_off                    Restore the previous prompt in that shell
 
@@ -63,6 +71,8 @@ function main() {
     options: {
       seed: { type: 'string' }, style: { type: 'string' }, palette: { type: 'string' },
       complexity: { type: 'string' }, label: { type: 'string' }, glyphs: { type: 'string' },
+      material: { type: 'string' }, alphabet: { type: 'string' }, symmetry: { type: 'string' },
+      height: { type: 'string' }, density: { type: 'string' }, scope: { type: 'string' }, program: { type: 'boolean' },
       width: { type: 'string' }, count: { type: 'string' }, from: { type: 'string' },
       variation: { type: 'string' }, out: { type: 'string' },
       force: { type: 'boolean' }, 'no-color': { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
@@ -76,13 +86,16 @@ function main() {
       process.stdout.write(`\n${title}\n`);
       for (const [name, data] of Object.entries(items)) process.stdout.write(`  ${name.padEnd(14)} ${data.description}\n`);
     }
+    process.stdout.write(`\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
     return;
   }
   if (!['preview', 'gallery', 'export', 'inspect', 'mutate'].includes(command)) throw new Error(`Unknown command: ${command}. See --help.`);
   if (values.out && !['export', 'inspect', 'mutate'].includes(command)) throw new Error('--out is available for export, inspect, and mutate.');
+  if (values.program && command !== 'inspect') throw new Error('--program is available for inspect.');
+  if (values.scope && command !== 'mutate') throw new Error('--scope is available for mutate.');
   const base = values.from ? recipe(fromRecipe(JSON.parse(readFileSync(values.from, 'utf8')))) : {};
   const options = { ...base };
-  for (const key of ['seed', 'style', 'palette', 'complexity', 'label', 'glyphs']) {
+  for (const key of ['seed', 'style', 'palette', 'complexity', 'label', 'glyphs', 'material', 'alphabet', 'symmetry', 'height', 'density']) {
     if (values[key] !== undefined) options[key] = values[key];
   }
   const design = createDesign(options);
@@ -96,8 +109,9 @@ function main() {
     else process.stdout.write(source);
     process.stderr.write(`Recipe: ${JSON.stringify(recipe(design))}\n`);
   } else if (command === 'inspect' || command === 'mutate') {
-    const result = command === 'mutate' ? mutateDesign(design, values.variation ?? randomSeed()) : design;
-    const json = JSON.stringify(recipe(result), null, 2) + '\n';
+    const result = command === 'mutate' ? mutateDesign(design, values.variation ?? randomSeed(), values.scope ?? 'all') : design;
+    if (values.program && !result.program) throw new Error('--program requires style compose.');
+    const json = JSON.stringify(values.program ? { recipe: recipe(result), ...result.program } : recipe(result), null, 2) + '\n';
     if (values.out) save(values.out, json, values.force);
     else process.stdout.write(json);
   } else if (command === 'preview') {
@@ -105,8 +119,6 @@ function main() {
     process.stdout.write(preview(design, renderOptions));
   } else {
     const count = integer(values.count, 5, 1, 24, 'Count');
-    const styles = Object.keys(grammars);
-    const inks = Object.keys(palettes);
     const faint = (s) => color ? `\x1b[38;2;126;133;151m${s}\x1b[0m` : s;
     const title = color ? '\x1b[38;2;220;232;230mP R O M P T L Y\x1b[0m' : 'P R O M P T L Y';
     process.stdout.write(`\n  ${title}  ${faint('/  field specimens')}\n`);
@@ -114,10 +126,9 @@ function main() {
     for (let i = 0; i < count; i++) {
       const specimen = createDesign({
         ...options, seed: `${design.seed}/${i + 1}`,
-        style: options.style ?? styles[i % styles.length],
-        palette: options.palette ?? inks[i % inks.length],
       });
-      process.stdout.write(`\n${faint(`  ${String(i + 1).padStart(2, '0')}  ${specimen.style.toUpperCase()} / ${specimen.palette} / ${JSON.stringify(specimen.seed)}`)}\n\n`);
+      const direction = specimen.style === 'compose' ? `${specimen.material} / ${specimen.alphabet} / ${specimen.symmetry}` : specimen.style;
+      process.stdout.write(`\n${faint(`  ${String(i + 1).padStart(2, '0')}  ${direction} / ${JSON.stringify(specimen.seed)}`)}\n\n`);
       process.stdout.write(preview(specimen, renderOptions));
     }
     process.stdout.write('\n');

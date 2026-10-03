@@ -1,10 +1,11 @@
 # Working on Promptly
 
-This is a generative art project whose medium is a usable zsh prompt. Pursue
-interesting structures, controlled color, and negative space. The user's visual
-reference has delicate neon ornament and asymmetrical left/right elements; the
-ambition includes alien structures connecting both sides. Git/status/time widgets
-are outside the current scope. Repository docs are primarily for maintainers.
+This is a generative art project whose medium is a usable zsh prompt. The current
+direction is smaller composable primitives, recursive structure, and broad visual
+possibility. The first version used named alien-themed layouts; those are now
+classic compatibility options. Prefer interoperable geometry and ornament
+operations over more full-prompt templates. Preserve controlled color and negative
+space. Git/status/time widgets are outside scope. Docs are for maintainers.
 
 - No runtime agent, Node process, network, or external command in exported prompts.
 - Previews must exercise the exported zsh renderer. Keep one source of rendering truth.
@@ -15,7 +16,10 @@ are outside the current scope. Repository docs are primarily for maintainers.
 - Test true terminal behavior with `microsoft/tui-test --backend ghostty`, then inspect PNGs.
   A text snapshot alone cannot detect missing glyphs or poor color. See docs for setup.
 - `npm test`, regenerate examples, and run the terminal suite after runtime changes.
-- New grammars should have genuinely different topology. Increasing complexity should
-  add structure and detail while preserving legibility, not just random character noise.
+- Add growth rules as atomic proposals with explicit attachment ports. Preserve
+  graph connectivity and reservations. New growth must remain eligible for rewriting.
+- Keep topology, material, alphabet, and detail RNG streams independent. An ornament
+  mutation must preserve the exact structural derivation.
+- Increase complexity through nested structure and detail while preserving legibility.
 
 See `docs/architecture.md` for decisions, constraints, and possible next steps.

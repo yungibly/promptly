@@ -8,7 +8,8 @@ export const middle = (offset = 0) => anchor(500, offset);
 const fallback = new Map();
 for (const [chars, replacement] of [
   ['─━═╌╍┄┅┈┉╴╶', '-'], ['│┃║╎╏┆┇┊┋', '|'],
-  ['╭┌┏╔╮┐┓╗╰└┗╚╯┘┛╝┬┴├┤┼╪╫╞╡╟╢╤╧', '+'],
+  ['╭┌┏╔╮┐┓╗╰└┗╚╯┘┛╝┬┴├┤┼╪╫╞╡╟╢╤╧╠╣╦╩╬┣┫┳┻╋', '+'],
+  ['╵╷╹╻', '|'], ['╺╸', '-'],
   ['╱', '/'], ['╲', '\\'], ['╳', 'X'],
   ['·∙⋅•∘°˙', '.'], ['⋮⁝', ':'], ['⋰', '/'], ['⋱', '\\'],
   ['◇◆◈◊⟐⟡⬡⌬', '*'], ['○◌◎⊙⊚⊕⊗', 'o'],
@@ -32,6 +33,10 @@ export class Scene {
   }
   fill(row, x, end, text = '─', ink = 0, minWidth = 0) {
     this.runs.push({ row, x, end, text: this.glyphs === 'ascii' ? ascii(text) : text, ink, minWidth });
+    return this;
+  }
+  wire(from, to, ink, charset) {
+    this.runs.push({ kind: 'wire', from, to, ink, charset: this.glyphs === 'ascii' ? ascii(charset) : charset });
     return this;
   }
   // Orthogonal branches have explicit corners, so the route reads as one thing.

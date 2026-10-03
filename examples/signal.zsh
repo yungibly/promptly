@@ -37,6 +37,39 @@ _promptly_paint() {
   return 0
 }
 
+# Wire cells carry four connection bits. Combining strokes yields the correct
+# corner, tee, or crossing at the actual terminal width, including after resize.
+_promptly_wire() {
+  local -i _pp_y1=$1 _pp_x1=$2 _pp_y2=$3 _pp_x2=$4 _pp_ink=$5
+  local _pp_charset=$6
+  local -i _pp_dx=0 _pp_dy=0 _pp_length=0 _pp_before=0 _pp_after=0
+  if (( _pp_y1 == _pp_y2 )); then
+    (( _pp_dx = (_pp_x2 > _pp_x1) - (_pp_x2 < _pp_x1) ))
+    (( _pp_length = (_pp_x2 - _pp_x1) * _pp_dx ))
+    if (( _pp_dx > 0 )); then _pp_before=8; _pp_after=2; else _pp_before=2; _pp_after=8; fi
+  elif (( _pp_x1 == _pp_x2 )); then
+    (( _pp_dy = (_pp_y2 > _pp_y1) - (_pp_y2 < _pp_y1) ))
+    (( _pp_length = (_pp_y2 - _pp_y1) * _pp_dy ))
+    if (( _pp_dy > 0 )); then _pp_before=1; _pp_after=4; else _pp_before=4; _pp_after=1; fi
+  else
+    return 1
+  fi
+  (( _pp_length > 0 )) || return 0
+  local -i _pp_i _pp_x _pp_y _pp_index _pp_mask
+  for (( _pp_i=0; _pp_i<=_pp_length; _pp_i++ )); do
+    (( _pp_x=_pp_x1+_pp_i*_pp_dx, _pp_y=_pp_y1+_pp_i*_pp_dy ))
+    (( _pp_x >= 0 && _pp_x < _pp_w )) || continue
+    (( _pp_index=_pp_y*_pp_w+_pp_x+1 ))
+    _pp_mask=${_pp_edges[_pp_index]:-0}
+    (( _pp_i > 0 )) && (( _pp_mask |= _pp_before ))
+    (( _pp_i < _pp_length )) && (( _pp_mask |= _pp_after ))
+    _pp_edges[_pp_index]=$_pp_mask
+    _pp_cells[_pp_index]=${_pp_charset[$(( _pp_mask+1 ))]}
+    (( _pp_inks[_pp_index] = _pp_ink > ${_pp_inks[_pp_index]:-0} ? _pp_ink : ${_pp_inks[_pp_index]:-0} ))
+  done
+  return 0
+}
+
 _promptly_build() {
   emulate -L zsh
   setopt multibyte
@@ -44,7 +77,7 @@ _promptly_build() {
   # Leave the final column unused to avoid autowrap. Bound work in unusual PTYs.
   (( _pp_w < 1 )) && _pp_w=1
   (( _pp_w > 1000 )) && _pp_w=1000
-  local -a _pp_cells _pp_inks _pp_colors
+  local -a _pp_cells _pp_inks _pp_colors _pp_edges
   _pp_colors=( '#536573' '#779197' '#81efc5' '#bf91f3' '#e9ed9a' '#dce8e6' )
   local -i _pp_height _pp_cursor
   local _pp_right
@@ -167,7 +200,7 @@ promptly_off() {
   [[ $_promptly_saved_bang == on ]] && setopt promptbang || unsetopt promptbang
   unset _promptly_active _promptly_width _promptly_frame _promptly_rights _promptly_saved_prompt _promptly_saved_rprompt _promptly_saved_ps2
   unset _promptly_saved_percent _promptly_saved_subst _promptly_saved_bang
-  unfunction _promptly_paint _promptly_build _promptly_expand _promptly_precmd _promptly_redraw promptly_off
+  unfunction _promptly_paint _promptly_wire _promptly_build _promptly_expand _promptly_precmd _promptly_redraw promptly_off
   return 0
 }
 
