@@ -131,7 +131,7 @@ test('untrusted seeds remain comment data; shell quoting round-trips literal tex
 });
 
 test('invalid recipes and options fail clearly', () => {
-  for (const options of [{ style: '__proto__' }, { palette: 'constructor' }, { complexity: 11 }, { complexity: 1.5 }, { glyphs: 'emoji' }, { label: '' }, { seed: '' }]) {
+  for (const options of [{ style: '__proto__' }, { palette: 'constructor' }, { complexity: 11 }, { complexity: 1.5 }, { glyphs: 'emoji' }, { label: 'too-long-for-a-static-label' }, { info: 'yes' }, { seed: '' }]) {
     assert.throws(() => createDesign(options));
   }
   assert.throws(() => fromRecipe({ version: 2 }));

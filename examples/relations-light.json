@@ -1,0 +1,94 @@
+{
+  "version": 6,
+  "seed": "relations/3",
+  "style": "compose",
+  "palette": "generated",
+  "complexity": 8,
+  "glyphs": "unicode",
+  "label": "",
+  "info": true,
+  "material": "rounded",
+  "alphabet": "technical",
+  "symmetry": "none",
+  "height": 1,
+  "density": 0.433,
+  "ornamentSeed": "relations/3",
+  "engine": "prompt",
+  "spread": 0.288,
+  "fragments": 3,
+  "connectivity": 0.783,
+  "weight": 0.15,
+  "colorSeed": "relations/3",
+  "colors": [
+    "#6d6463",
+    "#a08f8e",
+    "#c79b97",
+    "#b4bd9a",
+    "#c4a6a4",
+    "#ede8e8",
+    "#291f1f"
+  ],
+  "colorProgram": {
+    "generator": "chromatic-relationships/1",
+    "space": "oklch",
+    "baseHue": 24.376518,
+    "hueSpread": 95.520598,
+    "balance": -0.020456,
+    "chroma": 0.049948,
+    "lightness": 0.760151,
+    "lightnessSpread": 0.079188,
+    "referenceBackground": "#242733",
+    "surfaceIndex": 6,
+    "roles": [
+      {
+        "role": "quiet",
+        "lightness": 0.511776,
+        "chroma": 0.011988,
+        "hue": 24.376518,
+        "hex": "#6d6463"
+      },
+      {
+        "role": "line",
+        "lightness": 0.665421,
+        "chroma": 0.019979,
+        "hue": 22.422549,
+        "hex": "#a08f8e"
+      },
+      {
+        "role": "accent1",
+        "lightness": 0.729732,
+        "chroma": 0.052321,
+        "hue": 24.376518,
+        "hex": "#c79b97"
+      },
+      {
+        "role": "accent2",
+        "lightness": 0.781858,
+        "chroma": 0.04955,
+        "hue": 119.897116,
+        "hex": "#b4bd9a"
+      },
+      {
+        "role": "accent3",
+        "lightness": 0.751616,
+        "chroma": 0.035563,
+        "hue": 22.422549,
+        "hex": "#c4a6a4"
+      },
+      {
+        "role": "text",
+        "lightness": 0.934844,
+        "chroma": 0.004995,
+        "hue": 24.376518,
+        "hex": "#ede8e8"
+      },
+      {
+        "role": "surface",
+        "lightness": 0.251895,
+        "chroma": 0.015988,
+        "hue": 22.422549,
+        "hex": "#291f1f"
+      }
+    ]
+  }
+}

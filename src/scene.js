@@ -14,12 +14,15 @@ for (const [chars, replacement] of [
   ['·∙⋅•∘°˙', '.'], ['⋮⁝', ':'], ['⋰', '/'], ['⋱', '\\'],
   ['◇◆◈◊⟐⟡⬡⌬', '*'], ['○◌◎⊙⊚⊕⊗', 'o'],
   ['△▲▵▴', '^'], ['▽▼▿▾', 'v'], ['▷▹▸❯»›', '>'], ['◁◃◂❮«‹', '<'],
+  ['◖', '('], ['◗', ')'], ['▌▐', '|'], ['▀▗▖▝▘', '#'],
   ['⟨〈⟪', '<'], ['⟩〉⟫', '>'], ['⟦⌈⌊', '['], ['⟧⌉⌋', ']'],
   ['≋≈∿', '~'], ['═≡', '='], ['ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ', 'x'],
   ['░▒▓█▁▂▃▄▅▆▇', '#'], ['✦✧✶✳', '*'], ['⌁', '~'], ['⊣⊢', '+'],
 ]) for (const char of chars) fallback.set(char, replacement);
 
 export const ascii = (text) => [...text].map((c) => c.codePointAt(0) < 127 ? c : fallback.get(c) ?? '*').join('');
+const glyphText = (text, mode) => mode === 'ascii' ? ascii(text) : mode === 'powerline'
+  ? text.replaceAll('◖', '\ue0b6').replaceAll('◗', '\ue0b4') : text;
 
 export class Scene {
   constructor(rows, glyphs = 'unicode') {
@@ -28,11 +31,19 @@ export class Scene {
     this.runs = [];
   }
   text(row, x, text, ink = 2, align = 'left', minWidth = 0) {
-    this.runs.push({ row, x, text: this.glyphs === 'ascii' ? ascii(text) : text, ink, align, minWidth });
+    this.runs.push({ row, x, text: glyphText(text, this.glyphs), ink, align, minWidth });
+    return this;
+  }
+  // Live roles have a fixed cell reservation. The compiler emits only native
+  // zsh prompt escapes, keeping user/path data out of shell expression source.
+  slot(row, x, role, width, ink = 2) {
+    if (!['username', 'directory'].includes(role)) throw new Error(`Unknown live role: ${role}`);
+    if (!Number.isInteger(width) || width < 2 || width > 64) throw new Error('Live role width must be 2–64 cells.');
+    this.runs.push({ kind: 'slot', row, x, role, width, text: ' '.repeat(width), ink, align: 'left', minWidth: 0 });
     return this;
   }
   fill(row, x, end, text = '─', ink = 0, minWidth = 0) {
-    this.runs.push({ row, x, end, text: this.glyphs === 'ascii' ? ascii(text) : text, ink, minWidth });
+    this.runs.push({ row, x, end, text: glyphText(text, this.glyphs), ink, minWidth });
     return this;
   }
   wire(from, to, ink, charset) {

@@ -71,6 +71,9 @@ jobs:
 
           macOS and Linux downloads are provided for ARM64 and x86-64. Extract an archive and put `promptly` on your PATH. `SHA256SUMS` contains the archive checksums. Previews and generated prompts require zsh 5.8+.
           EOF
+          if [ -f "docs/releases/$RELEASE_TAG.md" ]; then
+            cp "docs/releases/$RELEASE_TAG.md" dist/release/notes.md
+          fi
           if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --verify-tag --draft --title "Promptly $RELEASE_TAG" --notes-file dist/release/notes.md
           fi

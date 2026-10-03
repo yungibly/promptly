@@ -1,0 +1,94 @@
+{
+  "version": 6,
+  "seed": "relations/2",
+  "style": "compose",
+  "palette": "generated",
+  "complexity": 7,
+  "glyphs": "powerline",
+  "label": "",
+  "info": true,
+  "material": "rounded",
+  "alphabet": "granular",
+  "symmetry": "none",
+  "height": 1,
+  "density": 0.421,
+  "ornamentSeed": "relations/2",
+  "engine": "surface",
+  "spread": 0.571,
+  "fragments": 1,
+  "connectivity": 0,
+  "weight": 0.8,
+  "colorSeed": "relations/2",
+  "colors": [
+    "#5d686e",
+    "#71888e",
+    "#7aa4ba",
+    "#a683a2",
+    "#6ba4b2",
+    "#dce1e4",
+    "#142226"
+  ],
+  "colorProgram": {
+    "generator": "chromatic-relationships/1",
+    "space": "oklch",
+    "baseHue": 232.102147,
+    "hueSpread": 98.514491,
+    "balance": -0.176685,
+    "chroma": 0.071306,
+    "lightness": 0.667877,
+    "lightnessSpread": 0.089314,
+    "referenceBackground": "#242733",
+    "surfaceIndex": 6,
+    "roles": [
+      {
+        "role": "quiet",
+        "lightness": 0.50975,
+        "chroma": 0.017113,
+        "hue": 232.102147,
+        "hex": "#5d686e"
+      },
+      {
+        "role": "line",
+        "lightness": 0.611159,
+        "chroma": 0.028522,
+        "hue": 214.696114,
+        "hex": "#71888e"
+      },
+      {
+        "role": "accent1",
+        "lightness": 0.694758,
+        "chroma": 0.056309,
+        "hue": 232.102147,
+        "hex": "#7aa4ba"
+      },
+      {
+        "role": "accent2",
+        "lightness": 0.652826,
+        "chroma": 0.060674,
+        "hue": 330.616638,
+        "hex": "#a683a2"
+      },
+      {
+        "role": "accent3",
+        "lightness": 0.684756,
+        "chroma": 0.063243,
+        "hue": 214.696114,
+        "hex": "#6ba4b2"
+      },
+      {
+        "role": "text",
+        "lightness": 0.907726,
+        "chroma": 0.007131,
+        "hue": 232.102147,
+        "hex": "#dce1e4"
+      },
+      {
+        "role": "surface",
+        "lightness": 0.242097,
+        "chroma": 0.021113,
+        "hue": 214.696114,
+        "hex": "#142226"
+      }
+    ]
+  }
+}

@@ -68,7 +68,7 @@ test('recursive ornaments respect their cell budget for every alphabet', () => {
 });
 
 test('compact prompts have a versioned, reproducible primitive program', () => {
-  const design = createDesign({ seed: 'program', engine: 'prompt' });
+  const design = createDesign({ version: 4, seed: 'program', engine: 'prompt' });
   assert.equal(design.style, 'compose');
   assert.equal(design.version, 4);
   assert.equal(design.program.engine, 'prompt-composition/1');

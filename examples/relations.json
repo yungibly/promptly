@@ -1,0 +1,94 @@
+{
+  "version": 6,
+  "seed": "relations/1",
+  "style": "compose",
+  "palette": "generated",
+  "complexity": 3,
+  "glyphs": "powerline",
+  "label": "",
+  "info": true,
+  "material": "square",
+  "alphabet": "granular",
+  "symmetry": "none",
+  "height": 1,
+  "density": 0.576,
+  "ornamentSeed": "relations/1",
+  "engine": "surface",
+  "spread": 0.526,
+  "fragments": 3,
+  "connectivity": 0,
+  "weight": 0.35,
+  "colorSeed": "relations/1",
+  "colors": [
+    "#666151",
+    "#7e8264",
+    "#b9a459",
+    "#8cc37b",
+    "#a7b151",
+    "#e3e1d9",
+    "#191b0a"
+  ],
+  "colorProgram": {
+    "generator": "chromatic-relationships/1",
+    "space": "oklch",
+    "baseHue": 94.047329,
+    "hueSpread": 44.272644,
+    "balance": 0.464787,
+    "chroma": 0.108799,
+    "lightness": 0.743402,
+    "lightnessSpread": 0.051547,
+    "referenceBackground": "#242733",
+    "surfaceIndex": 6,
+    "roles": [
+      {
+        "role": "quiet",
+        "lightness": 0.492688,
+        "chroma": 0.026112,
+        "hue": 94.047329,
+        "hex": "#666151"
+      },
+      {
+        "role": "line",
+        "lightness": 0.595133,
+        "chroma": 0.04352,
+        "hue": 114.624678,
+        "hex": "#7e8264"
+      },
+      {
+        "role": "accent1",
+        "lightness": 0.720866,
+        "chroma": 0.09847,
+        "hue": 94.047329,
+        "hex": "#b9a459"
+      },
+      {
+        "role": "accent2",
+        "lightness": 0.760211,
+        "chroma": 0.114149,
+        "hue": 138.319973,
+        "hex": "#8cc37b"
+      },
+      {
+        "role": "accent3",
+        "lightness": 0.732955,
+        "chroma": 0.121805,
+        "hue": 114.624678,
+        "hex": "#a7b151"
+      },
+      {
+        "role": "text",
+        "lightness": 0.907734,
+        "chroma": 0.01088,
+        "hue": 94.047329,
+        "hex": "#e3e1d9"
+      },
+      {
+        "role": "surface",
+        "lightness": 0.214204,
+        "chroma": 0.030112,
+        "hue": 114.624678,
+        "hex": "#191b0a"
+      }
+    ]
+  }
+}

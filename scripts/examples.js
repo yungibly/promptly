@@ -1,26 +1,20 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { createDesign, recipe } from '../src/design.js';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createDesign, fromRecipe, recipe } from '../src/design.js';
 import { compile } from '../src/compile.js';
 
-const examples = [
-  ['signal', 'first-contact/1', 'phosphor', 3],
-  ['reliquary', 'first-contact/2', 'ultraviolet', 5],
-  ['mycelium', 'first-contact/3', 'ember', 5],
-  ['orrery', 'first-contact/4', 'abyss', 5],
-  ['xenoweave', 'first-contact/5', 'phosphor', 5],
-];
+// Saved earlier recipes are compatibility specimens, including sampled colors
+// and controls. Recompile them without resampling their historical appearance.
+const saved = ['signal', 'reliquary', 'mycelium', 'orrery', 'xenoweave', 'compose', 'network', 'assembly', 'surface', 'surface-inline', 'surface-capsule', 'surface-curves'];
+const examples = saved.map((name) => [name, fromRecipe(JSON.parse(readFileSync(new URL(`../examples/${name}.json`, import.meta.url), 'utf8')))]);
+examples.push(
+  ['relations', createDesign({ engine: 'surface', seed: 'relations/1', complexity: 3, glyphs: 'powerline' })],
+  ['relations-inline', createDesign({ engine: 'surface', seed: 'relations/2', complexity: 7, height: 1, weight: 0.8, glyphs: 'powerline' })],
+  ['relations-light', createDesign({ engine: 'prompt', seed: 'relations/3', complexity: 8, weight: 0.15 })],
+  ['relations-capsule', createDesign({ engine: 'surface', seed: 'audit/349', complexity: 7, height: 1, glyphs: 'powerline' })],
+  ['live-network', createDesign({ engine: 'network', seed: 'working-art', complexity: 8, height: 6 })],
+);
 mkdirSync(new URL('../examples/', import.meta.url), { recursive: true });
-for (const [style, seed, palette, complexity] of examples) {
-  const design = createDesign({ style, seed, palette, complexity, label: 'finn' });
-  writeFileSync(new URL(`../examples/${style}.json`, import.meta.url), JSON.stringify(recipe(design), null, 2) + '\n');
-  writeFileSync(new URL(`../examples/${style}.zsh`, import.meta.url), compile(design));
+for (const [name, design] of examples) {
+  writeFileSync(new URL(`../examples/${name}.json`, import.meta.url), JSON.stringify(recipe(design), null, 2) + '\n');
+  writeFileSync(new URL(`../examples/${name}.zsh`, import.meta.url), compile(design));
 }
-const composed = createDesign({ seed: 'closely/6', complexity: 8, label: 'finn', engine: 'prompt' });
-writeFileSync(new URL('../examples/compose.json', import.meta.url), JSON.stringify(recipe(composed), null, 2) + '\n');
-writeFileSync(new URL('../examples/compose.zsh', import.meta.url), compile(composed));
-const network = createDesign({ seed: 'possibility/1', complexity: 7, label: 'finn', engine: 'network' });
-writeFileSync(new URL('../examples/network.json', import.meta.url), JSON.stringify(recipe(network), null, 2) + '\n');
-writeFileSync(new URL('../examples/network.zsh', import.meta.url), compile(network));
-const assembly = createDesign({ seed: 'possibility/43', complexity: 8, label: 'finn', engine: 'assembly' });
-writeFileSync(new URL('../examples/assembly.json', import.meta.url), JSON.stringify(recipe(assembly), null, 2) + '\n');
-writeFileSync(new URL('../examples/assembly.zsh', import.meta.url), compile(assembly));

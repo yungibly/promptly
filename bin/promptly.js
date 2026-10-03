@@ -30,20 +30,24 @@ const help = `
 
   --seed TEXT                     Repeatable seed; random when omitted
   --style NAME                    compose (default), or a classic named grammar
-  --engine auto|prompt|assembly|network
+  --engine auto|surface|prompt|assembly|network
                                   Mixed exploration by default, or focus one engine
-  --palette NAME                  phosphor, ultraviolet, ember, abyss
-  --complexity 1..10               Growth/detail budget (default: 3; classic: 1..5)
+  --palette NAME                  generated (default), or a named color collection
+  --color-seed TEXT               Resample color relationships independently
+  --weight 0..1                   Visual mass, independently sampled by default
+  --complexity 1..10               Growth/detail budget (sampled; classic: 1..5, default 3)
   --material NAME                 rounded, square, double, heavy, dashed
   --alphabet NAME                 geometric, punctuation, technical, granular, runic
   --symmetry none|mirror           Reflect the composition, or keep it asymmetric
-  --height 1..12                   Row budget: prompt 1–3, assembly 2–12, network 4–12
-  --spread 0..1                    Extent/right accents (prompt or assembly)
-  --fragments 1..12                Ornament/region target (prompt or assembly)
+  --height 1..12                   Row budget: surface/prompt 1–3, assembly 2–12, network 4–12
+  --spread 0..1                    Extent/right accents (surface, prompt, assembly)
+  --fragments 1..12                Role-group/repeat or region target
   --connectivity 0..1              Chance of linking eligible neighbors (often 0)
   --density 0.15..0.85             Detail/field density; network occupancy target
   --label TEXT                    Static inscription, up to 20 characters
-  --glyphs unicode|ascii           Unicode by default; no Nerd Font required
+  --no-info                       Omit live username and directory (on by default)
+  --info                          Enable live information on an older recipe
+  --glyphs unicode|ascii|powerline Unicode by default; powerline adds full-height round ends
   --width N                       Preview width (default: terminal width or 100)
   --count N                       Gallery size (default: 5; maximum: 24)
   --from FILE                     Load a saved JSON recipe
@@ -84,6 +88,7 @@ function main() {
     allowPositionals: true,
     options: {
       seed: { type: 'string' }, style: { type: 'string' }, palette: { type: 'string' },
+      weight: { type: 'string' }, 'color-seed': { type: 'string' },
       complexity: { type: 'string' }, label: { type: 'string' }, glyphs: { type: 'string' },
       material: { type: 'string' }, alphabet: { type: 'string' }, symmetry: { type: 'string' },
       engine: { type: 'string' }, spread: { type: 'string' }, fragments: { type: 'string' }, connectivity: { type: 'string' },
@@ -91,6 +96,7 @@ function main() {
       width: { type: 'string' }, count: { type: 'string' }, from: { type: 'string' },
       variation: { type: 'string' }, out: { type: 'string' },
       force: { type: 'boolean' }, 'no-color': { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
+      info: { type: 'boolean' }, 'no-info': { type: 'boolean' },
       preview: { type: 'boolean' }, version: { type: 'boolean', short: 'v' },
     },
   });
@@ -100,11 +106,12 @@ function main() {
   const command = positionals[0] ?? (values.preview ? 'preview' : 'export');
   if (positionals.length > 1) throw new Error('Unexpected positional arguments. See --help.');
   if (command === 'styles') {
+    process.stdout.write('\nCOLOR GENERATION\n  generated      Continuous, coherent color relationships (default)\n');
     for (const [title, items] of [['COMPOSITIONS', grammars], ['PALETTES', palettes]]) {
       process.stdout.write(`\n${title}\n`);
       for (const [name, data] of Object.entries(items)) process.stdout.write(`  ${name.padEnd(14)} ${data.description}\n`);
     }
-    process.stdout.write(`\nENGINES\n  auto (mixed), prompt (compact), assembly (freeform), network (connected)\n\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
+    process.stdout.write(`\nENGINES\n  auto (mixed), surface (color and role shapes), prompt (compact), assembly (freeform), network (connected)\n\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
     return;
   }
   if (!['preview', 'gallery', 'export', 'inspect', 'mutate'].includes(command)) throw new Error(`Unknown command: ${command}. See --help.`);
@@ -113,8 +120,16 @@ function main() {
   if (values.scope && command !== 'mutate') throw new Error('--scope is available for mutate.');
   const base = values.from ? recipe(fromRecipe(JSON.parse(readFileSync(values.from, 'utf8')))) : {};
   const options = { ...base };
-  for (const key of ['seed', 'style', 'palette', 'complexity', 'label', 'glyphs', 'engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'spread', 'fragments', 'connectivity']) {
+  if (values.info && values['no-info']) throw new Error('Choose either --info or --no-info.');
+  if (values.info || values['no-info']) options.info = !!values.info;
+  for (const key of ['seed', 'style', 'palette', 'complexity', 'label', 'glyphs', 'engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'spread', 'fragments', 'connectivity', 'weight']) {
     if (values[key] !== undefined) options[key] = values[key];
+  }
+  if (values['color-seed'] !== undefined) {
+    options.colorSeed = values['color-seed'];
+    options.palette = values.palette ?? 'generated';
+    delete options.colors;
+    delete options.colorProgram;
   }
   const design = createDesign(options);
   const width = integer(values.width, Math.min(1000, Math.max(10, process.stdout.columns || 100)), 10, 1000, 'Width');

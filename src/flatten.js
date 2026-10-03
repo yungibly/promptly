@@ -41,11 +41,13 @@ function textAt(span, width) {
 
 export function flatten({ scene, cursor }, width) {
   const rows = Array.from({ length: scene.rows }, () => [{ from: x(0), to: x(1000, 1), text: ' ', origin: x(0), ink: 0, edges: 0 }]);
-  const paint = (row, from, to, text, ink, mask = 0) => {
+  const paint = (row, from, to, text, ink, mask = 0, role = undefined) => {
     if (!rows[row] || !text.length) return;
     rows[row] = overlay(rows[row], from, to, width, (old) => mask
-      ? { ...old, text: chars(text)[old.edges | mask], origin: from, ink: Math.max(old.ink, ink), edges: old.edges | mask }
-      : { ...old, text, origin: from, ink });
+      ? { ...old, text: chars(text)[old.edges | mask], origin: from,
+        ink: typeof old.ink === 'number' && typeof ink === 'number' ? Math.max(old.ink, ink) : ink,
+        edges: old.edges | mask, role: undefined }
+      : { ...old, text, origin: from, ink, role });
   };
   for (const run of scene.runs) {
     if (run.kind === 'wire') {
@@ -65,7 +67,7 @@ export function flatten({ scene, cursor }, width) {
       const shift = run.align === 'right' ? 1 - count : run.align === 'center' ? -Math.floor(count / 2) : 0;
       const from = add(run.x, shift);
       const to = run.end ? add(run.end, shift) : add(from, count);
-      paint(run.row, from, to, run.text, run.ink);
+      paint(run.row, from, to, run.text, run.ink, 0, run.role);
     }
   }
   return rows.map((spans, row) => {
@@ -74,6 +76,9 @@ export function flatten({ scene, cursor }, width) {
     } else {
       while (spans.length) {
         const last = spans.at(-1), text = textAt(last, width);
+        // Spaces are visible material inside a filled tile; slots reserve cells
+        // even when their eventual dynamic value is shorter than the capacity.
+        if (last.role || typeof last.ink === 'object' && last.ink.bg != null) break;
         const trailing = chars(text).length - chars(text.trimEnd()).length;
         if (trailing === chars(text).length) { spans.pop(); continue; }
         if (trailing) last.to = add(last.to, -trailing);
@@ -84,11 +89,13 @@ export function flatten({ scene, cursor }, width) {
     const merged = [];
     for (const span of spans) {
       const previous = merged.at(-1);
-      if (previous && previous.ink === span.ink && previous.text === span.text && equal(previous.to, span.from)
+      if (previous && previous.role === span.role && (!span.role || equal(previous.origin, span.origin)) && JSON.stringify(previous.ink) === JSON.stringify(span.ink) && previous.text === span.text && equal(previous.to, span.from)
         && (chars(span.text).length === 1 || equal(previous.origin, span.origin))) previous.to = span.to;
       else merged.push({ ...span });
     }
-    return merged;
+    return merged.map((span) => span.role && value(span.from, width) === value(span.origin, width)
+      && value(span.to, width) - value(span.from, width) === span.text.length
+      ? { ...span, from: span.origin, to: add(span.origin, span.text.length) } : span);
   });
 }
 
@@ -100,4 +107,4 @@ export function spanLiteral(span) {
   return Array.from({ length: count }, (_, i) => pattern[((start + i) % pattern.length + pattern.length) % pattern.length]).join('');
 }
 
-export const spanKey = (span) => `${key(span.from)}/${key(span.to)}/${key(span.origin)}/${span.ink}/${span.text}`;
+export const spanKey = (span) => `${key(span.from)}/${key(span.to)}/${key(span.origin)}/${JSON.stringify(span.ink)}/${span.role ?? ''}/${span.text}`;

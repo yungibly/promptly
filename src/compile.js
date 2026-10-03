@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { recipe } from './design.js';
-import { flatten, distance, spanLiteral, spanKey } from './flatten.js';
+import { flatten, distance, coordinate, spanLiteral, spanKey } from './flatten.js';
+import { contrastInk } from './palettes.js';
 
 export const quoteZsh = (text) => `'${String(text).replaceAll("'", "'\\''")}'`;
 const promptText = (text) => text.replaceAll('%', '%%');
@@ -14,6 +15,21 @@ export function compile(design) {
     return constants.get(text);
   };
   function spanExpression(span) {
+    if (span.role) {
+      const width = span.to.offset - span.from.offset;
+      if (span.from.at !== span.to.at || span.from.at !== span.origin.at || span.from.offset !== span.origin.offset || width !== span.text.length) {
+        throw new Error('Live role reservation was clipped or overpainted.');
+      }
+      const code = span.role === 'username' ? '%n' : '%~';
+      // Native truncation counts terminal cells (including wide characters).
+      // Unroll padding conditions in the CLI; there is no prompt-time loop.
+      const padding = Array.from({ length: width }, (_, i) => {
+        const end = { ...span.from, offset: span.from.offset + i + 1 };
+        const column = end.at ? '$(( ' + coordinate(end) + ' ))' : end.offset;
+        return `%${column}(l.. )`;
+      }).join('');
+      return `%${width}<..<${code}%<<${padding}`;
+    }
     const literal = spanLiteral(span);
     if (literal !== null) return expansionText(literal);
     const length = distance(span.to, span.from);
@@ -34,12 +50,20 @@ export function compile(design) {
     const signature = rows.map((row) => row.map(spanKey).join('|')).join('\n');
     if (cache.has(signature)) return cache.get(signature);
     const result = rows.map((row) => {
-      let ink = -1;
+      let ink = -1, background = null;
       return row.map((span) => {
         let color = '';
-        if (/[^ ]/.test(span.text) && span.ink !== ink) {
-          color = `%F{${design.colors[span.ink]}}`;
-          ink = span.ink;
+        const style = typeof span.ink === 'object' ? span.ink : { fg: span.ink, bg: null };
+        const bg = style.bg == null ? null : design.colors[style.bg];
+        const preferred = style.fg === 'contrast' ? undefined : design.colors[style.fg ?? 2];
+        const fg = bg ? contrastInk(bg, preferred) : preferred ?? contrastInk('#000000');
+        if (bg !== background) {
+          color += bg ? `%K{${bg}}` : '%k';
+          background = bg;
+        }
+        if ((span.role || /[^ ]/.test(span.text) || bg) && fg !== ink) {
+          color += `%F{${fg}}`;
+          ink = fg;
         }
         return color + spanExpression(span);
       }).join('') + '%f%b%k';

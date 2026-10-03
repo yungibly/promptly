@@ -2,10 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { stripVTControlCharacters } from 'node:util';
-import { createDesign } from '../src/design.js';
+import { createDesign as createCurrentDesign } from '../src/design.js';
 import { compile } from '../src/compile.js';
 import { compile as legacy } from './fixtures/legacy-compile.js';
 import { Scene, left, right, anchor } from '../src/scene.js';
+
+// The independent renderer oracle covers frozen pre-slot scenes.
+const createDesign = (options) => createCurrentDesign({ version: options.style ? 1 : ({ network: 2, assembly: 3 }[options.engine] ?? 4), engine: options.style ? undefined : options.engine ?? 'prompt', ...options });
 
 function shell(input, timeout = 120000) {
   const r = spawnSync('zsh', ['-f'], { input, encoding: 'utf8', timeout, maxBuffer: 32 * 1024 * 1024 });
@@ -41,7 +44,7 @@ test('compiled text preserves every family, wire crossings, clipping, and narrow
     { engine: 'prompt', seed: 'a4c43e0e', palette: 'ultraviolet', complexity: 3 },
   ];
   for (const config of options) {
-    const design = createDesign({ seed: 'compiler-parity', ...config });
+    const design = createDesign({ info: false, seed: 'compiler-parity', ...config });
     const before = rendered(legacy(design), widths), after = rendered(compile(design), widths);
     for (let i = 0; i < widths.length; i++) assert.deepEqual(cells(after[i]), cells(before[i]), `${design.engine ?? design.style}, width ${widths[i]}`);
   }
@@ -54,7 +57,7 @@ test('span expressions preserve overlapping repeated patterns and literal shell 
   scene.text(1, left(), '$(print BAD) `print BAD` %F{red} \\ "quotes"', 2);
   scene.text(1, right(), 'TAIL', 4, 'right');
   scene.text(2, left(), '>');
-  const design = { ...createDesign({ seed: 'literal' }), scene, cursor: 2 };
+  const design = { ...createDesign({ info: false, seed: 'literal' }), scene, cursor: 2 };
   const widths = Array.from({ length: 48 }, (_, i) => 80 + i);
   const before = rendered(legacy(design), widths), after = rendered(compile(design), widths);
   for (let i = 0; i < widths.length; i++) assert.deepEqual(cells(after[i]), cells(before[i]), `width ${widths[i]}`);
@@ -64,14 +67,14 @@ test('span expressions preserve overlapping repeated patterns and literal shell 
 test('compact and connected exports match the old renderer throughout the supported width domain', () => {
   const widths = Array.from({ length: 1001 }, (_, i) => i + 1);
   for (const config of [{ engine: 'prompt', seed: 'a4c43e0e', complexity: 3 }, { engine: 'network', seed: 'domain', height: 4, complexity: 8 }]) {
-    const design = createDesign(config);
+    const design = createDesign({ ...config, info: false });
     const before = rendered(legacy(design), widths), after = rendered(compile(design), widths);
     for (let i = 0; i < widths.length; i++) assert.deepEqual(cells(after[i]), cells(before[i]), `${config.engine}, width ${widths[i]}`);
   }
 });
 
 test('replacing a legacy export retires its hooks and still restores the original shell', () => {
-  const design = createDesign({ seed: 'upgrade', engine: 'prompt' });
+  const design = createDesign({ info: false, seed: 'upgrade', engine: 'prompt' });
   const output = shell(`PROMPT='original> '\nRPROMPT='right'\nPS2='more> '\nunsetopt multibyte\n${legacy(design)}\n${compile(design)}
 print -r -- "hooks:\${(j:,:)precmd_functions}"
 print \${+functions[_promptly_build]}:\${+functions[_promptly_expand]}
@@ -82,7 +85,7 @@ print -r -- "$PROMPT|$RPROMPT|$PS2|$options[multibyte]"
 });
 
 test('small exports contain only text, parameter arithmetic, and undo support', () => {
-  const design = createDesign({ seed: 'a4c43e0e', engine: 'prompt', palette: 'ultraviolet', complexity: 3 });
+  const design = createDesign({ info: false, seed: 'a4c43e0e', engine: 'prompt', palette: 'ultraviolet', complexity: 3 });
   const source = compile(design);
   assert.ok(Buffer.byteLength(source) < Buffer.byteLength(legacy(design)) / 3);
   assert.doesNotMatch(source, /\$\((?!\()|_promptly_(?:paint|wire|expand)\(|add-zsh-hook|add-zle-hook|for\s*\(\(/);

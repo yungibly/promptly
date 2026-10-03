@@ -32,7 +32,7 @@ try {
   assert.equal(random.stderr, '');
   assert.match(random.stdout, /# Promptly/);
   let checks = 3;
-  for (const engine of ['prompt', 'network', 'assembly']) {
+  for (const engine of ['surface', 'prompt', 'network', 'assembly']) {
     const args = ['--seed', 'standalone', '--engine', engine, '--complexity', '8', '--label', 'finn'];
     const emitted = run(args, { ...environment, PATH: '/no-external-runtime' });
     assert.equal(emitted.stderr, '');

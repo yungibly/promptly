@@ -11,6 +11,8 @@ mix while working on distribution.
 1. Bump `package.json` to the intended `major.minor.patch`. Run `npm test`,
    `npm run build`, and `npm run test:binary`. Runtime or geometry changes also
    require regenerated examples and Ghostty terminal tests (see AGENTS.md).
+   Add release notes at `docs/releases/vMAJOR.MINOR.PATCH.md`; the workflow uses
+   that file as the GitHub release body when present.
 2. Commit and push to `main`. Wait for all four native CI jobs to pass.
 3. Create and push a matching tag, e.g. `git tag v0.5.0` and
    `git push origin v0.5.0`. The release workflow checks the tag against the source

@@ -13,8 +13,19 @@
   Geometry is rasterized during generation, then emitted into the shared cell IR.
 - `src/design.js`: automatic engine sampling, compatible controls, resolved traits,
   versioned recipes, and scoped mutation. Automatic mode is a selection policy.
-- `src/prompt.js`: compact role-based composition. Local decoration grows around
-  label bounds and the input marker within 1–3 rows, with optional right accents.
+- `src/relations.js`: the version-6 role composer. Protected text intervals form
+  relation trees; atomic treatments can attach to individual roles or groups.
+  One visual-weight budget controls paint and edges independently of complexity.
+- `src/prompt.js` and `src/surface.js`: frozen version-4 compact and version-5
+  surface generators, retained for saved recipes. Their shape catalogues no longer
+  determine fresh compact compositions.
+- `src/role-band.js`: attaches the shared role composer to larger artwork.
+- `src/identity.js`: retains the older identity behavior for compatibility and
+  supplies the narrow fallback.
+- `src/chromatic.js`: continuous OKLCH color relationships, gamut mapping, and
+  contrast checks. Named color streams are independent of geometry and detail.
+- `src/palettes.js`: seventeen optional named color bookmarks and contrast ink for
+  filled text. Existing collections are unchanged for recipe compatibility.
 - `src/assembly.js`: freeform composition. Partitions a seeded spatial region,
   generates independent recursive pieces, optionally links eligible neighbors,
   decorates them, and removes unused vertical margins. No mandatory backbone.
@@ -30,7 +41,9 @@
 - `src/scene.js`: ordered text/fill runs. X coordinates are `(per-mille anchor,
   column offset)`. Rows are discrete. A fill's end is exclusive; text supports
   left/center/right alignment. A wire run connects two affine vertices and carries a
-  material's 16-glyph connection table. Later text overpaints wires, including spaces.
+  material's 16-glyph connection table. Fixed-width slots reserve live text roles.
+  Ink can be a palette index or a foreground/background pair. Later text overpaints
+  wires, including spaces; spaces with a background are occupied artwork.
 - `src/flatten.js`: resolve ordered overlays and wire junctions into colored spans
   in JavaScript. Span boundaries retain affine anchors; wire masks are resolved
   before export, including width-dependent intersections and clipping.
@@ -50,13 +63,14 @@ paints into the editable buffer or moves the cursor manually.
 
 ## Runtime contract
 
-The standalone file needs only zsh builtins.
-It never reads cwd, time, exit status, Git, or network state. Its only changing
-input is `COLUMNS`. `PROMPT_SUBST` selects precompiled strings and evaluates only
-parameter padding and integer arithmetic. There are no drawing loops, prompt
-callbacks, redraw widgets, signal traps, or command substitutions. zsh's own
-SIGWINCH prompt expansion immediately recalculates the gaps, so resizing does not
-need a cached canvas or a shell subprocess.
+The standalone file needs only zsh builtins. Geometry responds to `COLUMNS`;
+username and current directory use native `%n` and `%~` prompt escapes. It never
+reads time, exit status, Git, or network state. `PROMPT_SUBST` selects precompiled
+strings and evaluates only parameter padding and integer arithmetic. Native prompt
+truncation and `%(l..)` conditions keep live fields inside fixed cell reservations.
+There are no drawing loops, prompt callbacks, redraw widgets, signal traps, or
+command substitutions. zsh's own SIGWINCH prompt expansion immediately recalculates
+the gaps, so resizing does not need a cached canvas or a shell subprocess.
 
 The `(e)` flag expands compiler-authored padding expressions stored in strings.
 Escape literal dollar signs, backticks, and backslashes for exactly that expansion;
@@ -74,10 +88,15 @@ Ctrl+L and exact scene parity after it. A future redraw strategy should improve
 the visual remnants without clearing command output or hijacking signal traps.
 
 Reserve one terminal column to prevent autowrap. Full art starts at 80 columns;
-28–79 columns use a two-line compact inscription, and smaller windows get a tiny
+28–79 columns use a two-line compact prompt, and smaller windows get a tiny
 input marker. Bound the usable width to 1000 columns. Every drawn glyph must occupy
 one terminal cell, without combining marks, emoji sequences, or control characters.
 ASCII mode preserves geometry using one-character substitutions.
+Unicode mode uses no private-use characters. Optional `--glyphs powerline` maps
+the existing `◖`/`◗` end caps to U+E0B6/U+E0B4 during scene lowering, preserving
+the same derivation and cell reservations. These full-height half-circles require
+font or terminal renderer coverage and are checked in Ghostty separately from
+the default Unicode mode.
 
 Local measurement for the user's `a4c43e0e` compact specimen at 120 columns:
 v0.5.1 takes about 1.93 ms to source and 0.775 ms per prompt expansion; v0.6 takes
@@ -95,51 +114,168 @@ first calls its undo function to retire its old hooks and renderer. Promptly use
 Other prompt managers actively assigning PROMPT in their own hooks may conflict;
 this first version is intended to own the prompt in a shell.
 
-All inscriptions are validated static ASCII text; user seed data is JSON-escaped
-in a comment. No shell eval. The IR does not accept arbitrary code or terminal
-escape sequences. Version 1 recipes retain the classic grammar fields. Version 2
-adds resolved material, alphabet, symmetry, height, density, and ornament seed for
+Static inscriptions are validated ASCII text; live roles accept only the compiler's
+username/directory tokens, never arbitrary prompt code. Their values come directly
+from zsh at prompt expansion, rather than being interpolated into shell expressions.
+User seed data is JSON-escaped in a comment. No shell eval. The IR does not accept
+arbitrary code or terminal escape sequences. Version 1 recipes retain the classic
+grammar fields. Version 2 adds resolved material, alphabet, symmetry, height,
+density, and ornament seed for
 `graph-rewrite/1`. Version 3 selects `spatial-assembly/1` and adds engine, spread,
 fragments, and connectivity. Version 4 uses the same control fields for
-`prompt-composition/1`. Loading versions 2 and 3 still selects their unchanged
-generators. Resolved recipes freeze the engine and all sampled controls;
+`prompt-composition/1`. Version 5 uses `surface-composition/1`. Fresh composed
+designs use version 6: compact engines use `role-relations/1`, and larger engines
+retain their art with the shared role band. Version 6 records `weight`; generated
+colors store `colors`, `colorSeed`, and `colorProgram`. The optional `info`
+field records live-field behavior; new designs enable it, while version-1–4 recipes
+without the field load with their original static inscriptions. Loading versions
+1–5 still selects their unchanged generators. Resolved recipes freeze the engine
+and all sampled controls;
 `auto` is never stored as an unresolved renderer. Regression tests hash the previous
 network and assembly scenes and derivations independently of runtime source.
 
-## Sampling and compact prompt composition
+## Sampling and shared role composition
 
 The user's correction after the freeform experiment: all of these directions are
 desirable possibilities, but each iteration must not make one look universal.
 Freeform art also does not replace a composition that feels integrated into a
-shell prompt. Keep compact, connected, and freeform engines in automatic sampling.
+shell prompt. Keep surface, compact, connected, and freeform engines in automatic
+sampling.
 
 `auto` filters engines by explicit controls, then selects with a dedicated seeded
-RNG stream. Prompt supports 1–3 rows, assembly 2–12, and network 4–12. Explicit
-spread/fragments/connectivity exclude network because it has different semantics.
-Automatic row budgets are sampled separately from complexity, including small and
-large footprints. Explicit engine selection preserves that engine's own defaults;
-saved recipe values always take precedence. Mutation keeps the resolved engine.
+RNG stream. Surface and prompt support 1–3 rows, assembly 2–12, and network 4–12.
+Explicit spread/fragments/connectivity exclude network because it has different semantics.
+Fresh version-6 compositions sample omitted complexity uniformly over integers
+1–10 using `trait:complexity`. Fresh automatic and explicitly selected engines
+both sample their row budget through the independent `trait:auto-height` stream:
+surface/prompt use `[1, 2, 2, 3]`, assembly `[2, 3, 4, 6, 8, 12]`, and network
+`[4, 4, 5, 6, 8, 12]`. Low complexity therefore does not exclude a large footprint,
+and high complexity does not force one. Engine, weight, geometry traits, and color
+streams remain independent of this sampling; an explicit complexity override
+does not consume or change their random choices.
 
-Compact construction begins with label and input roles. A band of bounded tokens
-contains the label, nested delimiter pairs, optional short joins, and recursive
-micro-expressions. Extra rows provide a cap above/below the inscription or a fold
-into the input marker. Caps may be open, beveled, or cut. Geometry uses the same
-stroke/group/cut algebra as assembly; decorations never occupy an independent
-central canvas. Local symmetry balances caps, while inscriptions remain readable.
+Explicit controls and saved recipe values always take precedence. Recipes record
+the resolved integer complexity, including exports from bare `promptly` and
+seed-only invocations. Reloading or mutating a recipe preserves that choice.
+Classic styles and explicitly selected version-1–5 generators retain the previous
+omitted-complexity default of 3 and their existing footprint rules. A change to
+fresh sampling must not reinterpret a saved engine or older generator.
 
-The label band fits in 44 leftmost columns, with a smaller budget on single-row
-prompts. Input always ends with a recognizable introducer and one space. A native
-RPROMPT and a short right-hand inscription are optional; the latter shares the
-label baseline and can receive a sampled bridge. Reserved token capacities keep
-ornament mutation from shifting input or changing geometry. Material and alphabet
-overrides remain independent of the role derivation.
+Version-6 compact construction starts with username, directory, optional label,
+and input reservations. Ordering, baselines, gaps, alignment, indentation, and
+width-relative separation form a relation tree. A role is a protected interval,
+not an implicit rectangle. Adjacent roles may share one treatment, remain bare,
+or receive independent treatments; large empty corridors remain empty.
+
+Command entry is also a relation: it can follow the final text baseline or start
+on a separate line. A following command constrains that baseline to a compact
+left-hand footprint; distant width-relative roles are available when command
+entry has its own row. `height` is a cap. Rebase the first occupied text row, then
+remove every unused display row after painting. `program.rowMap` records this
+compaction while `program.derivation` retains the planning coordinates. Neither
+weight nor complexity changes role placement, its input relation, or its height
+budget. Accepted detail may use a previously empty row within that budget.
+
+Select a partition of the relation tree before proposing treatments, so shared
+groups compete at their own level rather than losing to the first decorated
+leaf. Atomic proposals add a single-row surface, horizontal rounded caps, an
+edge, brackets, a short rule, a bounded join, or a rail. Generate a bounded batch,
+reject geometrically invalid candidates, rank eligible candidates by seeded
+operator and weight preferences, and then commit within the global budgets.
+Each proposal records its priority, acceptance or rejection, and reason. Reject
+collisions with text, excursions outside reserved artwork, repeated treatment of
+an already-treated role, and excess fill, edge, or treatment cost. A surface may
+cover a complete selected role or group; it cannot split a live field. Fresh
+compositions do not build filled top/bottom contours around each label. Those
+shapes remain in frozen version-5 recipes.
+
+`weight` controls visible paint and edge budgets; zero leaves bare text. Complexity
+controls proposal attempts and the extent of nested/repeated thin rules and joins
+within those budgets. It does not silently increase the budgets themselves.
+`fragments` limits the treatment-group partition and repeat count; `density`
+controls thin-rule extent; `connectivity` gates joins and rails. `spread` changes
+the chance of width-relative separation, and mirror symmetry pairs local side
+edges. These controls retain their established artwork meanings in assembly and
+network. Surface and prompt use the same composer, with prompt preferring line
+treatments and allocating less of the same weight to fill.
+Assembly and network keep their procedural art and use this composer for their
+live information band. Line materials are applied after planning; rounded and
+square can share a straight stroke, while heavy, double, and dashed differ.
+Alphabet and ornament choices decorate existing one-cell join reservations.
+They never introduce new intervals or shift command entry. Named streams isolate
+placement, proposal generation, ranking preferences, material, ornament, and
+color. Material chooses dark or accent-colored surfaces after acceptance;
+generated dark surfaces use palette slot 6 and named collections fall back to 0.
+Light surfaces use contrasting text. These choices retain the exact derivation.
 
 Mixed galleries draw a candidate pool, select from the least-represented eligible
-engine first, then maximize geometric distance within that set. Six specimens
-therefore include two from each available engine when the pool contains all three.
+engine first, then maximize geometric distance within that set. Eight specimens
+therefore include two from each available engine when the pool contains all four.
 Fixed-engine galleries still explore variations within that engine. Changing color
 or ASCII fallback does not change selection. This policy exposes multiple families
 without introducing a catalogue of fixed finished prompts.
+
+Distance is measured on the flattened scene, including filled whitespace and
+protected text. Multi-scale occupancy, row/column mass, disconnected components,
+gaps, span, input position, and fill/stroke/text proportions distinguish actual
+composition. Selection starts near the pool's geometric center rather than giving
+the first seed special priority. Normalize glyph fallback before measuring;
+resolved colors never enter the vector. Proposal validity belongs to the composer,
+so gallery curation cannot hide text collisions or compensate for an invalid scene.
+
+## Generated color and live text
+
+Fresh designs use `palette: generated`, including fresh classic designs. Existing
+named collections are optional bookmarks rather than the default sampling space.
+`generateColors(colorSeed)` returns seven resolved sRGB colors and a color program.
+Continuous base hue, hue spread, relative hue balance, chroma, lightness, and
+lightness spread define the relationships. Named `color:relationships`,
+`color:lightness`, and `color:chroma` streams keep color independent of composition.
+Low spread and chroma allow near-monochrome results; broader sampled relationships
+produce separated accents without a finite list of harmony names.
+
+Conversion uses [OKLab's published sRGB matrices](https://bottosson.github.io/posts/oklab/).
+Out-of-gamut colors reduce chroma at fixed hue and lightness. Contrast checks use
+the final eight-bit sRGB values and [relative luminance](https://www.w3.org/TR/WCAG22/#dfn-relative-luminance).
+Slots 0 and 1 remain visible structural inks; slots 2–4 are accents and 5 is text.
+Slot 6 is a separate dark surface, so subdued lines no longer double as panel
+backgrounds. Contrast minima against both slot 6 and the dark reference `#242733`
+are 2.4:1 for quiet structure, 3:1 for stronger lines, 4.5:1 for accents, and 7:1
+for text. The reference is a generation constraint, not a claim about every user
+terminal theme. Light accent fills use the compiler's contrasting foreground.
+
+Generated recipes persist actual `colors`, `colorSeed`, and `colorProgram`, whose
+role entries include resolved OKLCH coordinates and hex values. All mutation scopes
+preserve these colors. `--color-seed` resamples color independently; an explicit
+named palette override also leaves geometry and gallery selection unchanged.
+
+Foreground/background pairs preserve filled spaces through flattening and span
+coalescing; the compiler resets background at gaps and before command entry.
+The compiler keeps colored text at a contrast ratio of at least 4.5:1; otherwise
+`contrastInk` selects black or white from the surface's sRGB luminance, yielding
+at least 4.58:1 for that fallback without relying on the terminal's theme.
+
+At 28–79 terminal columns the shared fallback keeps username and directory on a
+compact first row with input on the second; smaller widths use only the input marker. `--no-info`
+opts out, and `--info` can add live fields when loading an older recipe. This
+changes displayed information without adding shell hooks or a runtime renderer.
+
+`docs/surfaces.png` and `docs/possibilities.png` show focused and mixed Ghostty
+galleries. `docs/shapes.png` records the earlier version-5 contour experiment.
+`docs/relations.png` and `docs/relations-normalized.png` compare the same twelve
+consecutive seeds with natural and fixed colors. `docs/capsules-v6.png` separately
+checks fresh horizontal half-circle caps; it is not part of that uncurated batch.
+The release audit also records `slot-machine/1` through `/24` in
+`docs/defaults-1.png` through `docs/defaults-4.png`, with matching `-normalized`
+captures. These invoke the CLI with only a seed: no engine, complexity, height,
+weight, color, or glyph override. Keep the whole consecutive batch, including
+random streaks. A short batch need not contain every engine; check reachability
+over the wider fixed pool. `docs/default-extremes-1.png` and `-2.png` supplement
+that batch with objective extrema from 256 seeds, labeled by selection criterion.
+Visual review must compare fixed-color specimens as well as natural colors:
+changing hue must not disguise repeated compositions. Check filled-space preservation,
+contrasting text, readable paths, balanced empty space, and clear command entry as
+well as glyph coverage and silhouette diversity.
 
 ## Spatial assembly mechanics
 
@@ -188,12 +324,9 @@ expressions, vocabulary weights, and measured primitive counts. Geometry and det
 use separate RNG streams. Surface overrides or an ornament mutation retain the
 same derivation. Version 3 preserves all resolved controls in its ordinary recipe.
 
-Galleries choose diverse geometries from a pool of eight candidates per requested
-specimen. Start with seed `/1`, then greedily maximize distance from the closest
-selected specimen. Features include spatial occupancy, row count, span, region
-count, link presence, and proportions of stroke/pixel/mark/text cells. Sampling is
-deterministic; all displayed seeds can be generated directly. This is curation of
-procedural results, not a bank of saved designs.
+Galleries use the shared final-scene distance described above, including for
+assemblies. Measure after masks and overlays; raw derivation size is not a proxy
+for the amount or shape of visible art. All displayed seeds remain reproducible.
 
 ## Network engine mechanics (version 2)
 
@@ -255,10 +388,11 @@ capture could not draw U+27D0/U+27E1, so replace those with supported diamonds.
 
 - Additional transforms: arbitrary rotations with terminal aspect correction,
   nonlinear deformation, and multiple scales of recursive spatial subdivision.
-- Richer texture/raster bases and continuous palette variation. Do not couple
+- Richer texture/raster bases and interactions between existing operators. Do not couple
   these to named whole-prompt templates or universal connecting strokes.
 - A terminal exploration interface that supports keeping and mutating specimens.
-- Palette interpolation with a dark/light contrast model.
+- Color-area balancing and dark/light adaptation for unfilled artwork; preserve
+  the generated role relationships and existing text contrast guarantees.
 - Optional slow variation per prompt, only if exported runtime stays self-contained
   and stable during editing. Do not add background animation or shell indicators.
 - If a future recipe gains custom text/glyph input, implement real terminal cell

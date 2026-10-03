@@ -8,7 +8,7 @@ import { preview } from '../src/preview.js';
 import { gallery } from '../src/gallery.js';
 
 test('automatic sampling retains all procedural engines and freezes the resolved recipe', () => {
-  const counts = { prompt: 0, network: 0, assembly: 0 }, heights = new Set();
+  const counts = { surface: 0, prompt: 0, network: 0, assembly: 0 }, heights = new Set();
   for (let i = 0; i < 120; i++) {
     const design = createDesign({ seed: `all-possibilities/${i}`, complexity: 8 });
     counts[design.engine]++;
@@ -20,7 +20,7 @@ test('automatic sampling retains all procedural engines and freezes the resolved
   }
   for (const count of Object.values(counts)) assert.ok(count >= 20);
   for (const height of [1, 2, 3, 4, 6, 8, 12]) assert.ok(heights.has(height));
-  assert.equal(createDesign({ seed: 'single', height: 1 }).engine, 'prompt');
+  assert.ok(['surface', 'prompt'].includes(createDesign({ seed: 'single', height: 1 }).engine));
   for (let i = 0; i < 20; i++) {
     const low = createDesign({ seed: `constraints/${i}`, height: 2 });
     assert.notEqual(low.engine, 'network');
@@ -33,12 +33,12 @@ test('automatic sampling retains all procedural engines and freezes the resolved
 
 test('mixed galleries balance families rather than replacing the earlier visual directions', () => {
   const options = { seed: 'whole-range', complexity: 9 };
-  const designs = gallery(options, 9);
-  for (const engine of ['prompt', 'assembly', 'network']) assert.equal(designs.filter((d) => d.engine === engine).length, 3);
+  const designs = gallery(options, 12);
+  for (const engine of ['surface', 'prompt', 'assembly', 'network']) assert.equal(designs.filter((d) => d.engine === engine).length, 3);
   const seeds = designs.map((d) => d.seed);
-  assert.deepEqual(gallery(options, 9).map((d) => d.seed), seeds);
-  assert.deepEqual(gallery({ ...options, palette: 'ember', glyphs: 'ascii' }, 9).map((d) => d.seed), seeds);
-  for (const engine of ['prompt', 'assembly', 'network']) assert.ok(gallery({ ...options, engine }, 3).every((d) => d.engine === engine));
+  assert.deepEqual(gallery(options, 12).map((d) => d.seed), seeds);
+  assert.deepEqual(gallery({ ...options, palette: 'ember', glyphs: 'ascii' }, 12).map((d) => d.seed), seeds);
+  for (const engine of ['surface', 'prompt', 'assembly', 'network']) assert.ok(gallery({ ...options, engine }, 3).every((d) => d.engine === engine));
 });
 
 test('compact geometry stays attached to label and input at one, two, and three rows', () => {
@@ -46,7 +46,7 @@ test('compact geometry stays attached to label and input at one, two, and three 
   let folds = 0, unlinked = 0, bridges = 0, bevels = 0;
   for (let i = 0; i < 192; i++) {
     const height = 1 + i % 3;
-    const design = createDesign({ seed: `integrated/${i}`, engine: 'prompt', height, complexity: 10, connectivity: i % 2, spread: 1 });
+    const design = createDesign({ seed: `integrated/${i}`, engine: 'prompt', version: 4, info: false, height, complexity: 10, connectivity: i % 2, spread: 1 });
     const { inscription, marker, tokens, attachments, linked } = design.program.derivation;
     forms.add(JSON.stringify(design.program.derivation));
     assert.equal(design.scene.rows, height);
@@ -73,11 +73,11 @@ test('compact geometry stays attached to label and input at one, two, and three 
 });
 
 test('compact exports preserve inscriptions, input markers, ASCII geometry, and editing space', () => {
-  const tiny = createDesign({ engine: 'prompt', seed: 'tiny-cap/0', label: 'x', height: 3, complexity: 1 });
+  const tiny = createDesign({ engine: 'prompt', version: 4, info: false, seed: 'tiny-cap/0', label: 'x', height: 3, complexity: 1 });
   assert.match(preview(tiny, { color: false }).split('\n')[0], /·/, 'a single-cell cap must remain visible');
   const label = 'twenty-character-tag';
   for (let i = 0; i < 12; i++) {
-    const design = createDesign({ seed: `readable/${i}`, engine: 'prompt', height: 1 + i % 3, complexity: 10, label });
+    const design = createDesign({ seed: `readable/${i}`, engine: 'prompt', version: 4, info: false, height: 1 + i % 3, complexity: 10, label });
     const safe = createDesign({ ...recipe(design), glyphs: 'ascii' });
     for (const width of [80, 120, 200]) {
       const text = preview(design, { width, color: false });
@@ -95,7 +95,7 @@ test('compact exports preserve inscriptions, input markers, ASCII geometry, and 
 });
 
 test('compact surface/detail variation preserves the role geometry and saved recipes', () => {
-  const design = createDesign({ engine: 'prompt', seed: 'small-recursion', complexity: 9, height: 3 });
+  const design = createDesign({ version: 4, engine: 'prompt', seed: 'small-recursion', complexity: 9, height: 3 });
   assert.equal(design.version, 4);
   for (const surface of [{ material: 'heavy' }, { alphabet: 'runic' }, { palette: 'abyss' }]) {
     const variant = createDesign({ ...recipe(design), ...surface });
