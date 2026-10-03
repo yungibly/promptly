@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  binary:
+    name: ${{ matrix.archive }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: bun-darwin-arm64
+            archive: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: bun-darwin-x64
+            archive: x86_64-apple-darwin
+          - runner: ubuntu-24.04-arm
+            target: bun-linux-arm64-musl
+            archive: aarch64-unknown-linux-musl
+          - runner: ubuntu-24.04
+            target: bun-linux-x64-musl
+            archive: x86_64-unknown-linux-musl
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.2'
+      - name: Install zsh on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zsh
+      - run: npm test
+      - name: Compile native executable
+        run: bun --no-env-file scripts/build.js --target '${{ matrix.target }}'
+      - name: Test isolated executable without a JS runtime
+        run: npm run test:binary
+      - name: Package executable and checksums
+        run: node scripts/release.js package '${{ matrix.archive }}'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: binary-${{ matrix.archive }}
+          path: dist/release/*
+          if-no-files-found: error
+          retention-days: 7

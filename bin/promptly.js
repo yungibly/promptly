@@ -10,10 +10,16 @@ import { palettes } from '../src/palettes.js';
 import { randomSeed } from '../src/random.js';
 import { materials, alphabets } from '../src/ornaments.js';
 import { gallery } from '../src/gallery.js';
+import packageInfo from '../package.json' with { type: 'json' };
 
 const help = `
   P R O M P T L Y
   A generative art instrument for your shell.
+
+  promptly [options]               Print a fresh, sourceable zsh prompt to stdout
+  promptly | pbcopy                Copy it to the clipboard on macOS
+  promptly > prompt.zsh            Save it; then source ./prompt.zsh
+  source <(promptly)               Try a fresh prompt immediately in zsh
 
   promptly preview [options]       Render a design using its actual zsh runtime
   promptly gallery [options]       Explore a collection of diverse specimens
@@ -47,15 +53,17 @@ const help = `
   --out FILE                      Export destination; otherwise writes to stdout
   --force                         Allow replacing an existing output file
   --no-color                      Plain previews
+  --preview                       Render instead of printing shell code
+  --version                       Print the CLI version
   --help                          Show this help
 
-  node bin/promptly.js gallery --seed possibility --complexity 7 --label finn
-  node bin/promptly.js export --seed moth --out moth.zsh
+  promptly gallery --seed possibility --complexity 7 --label finn
+  promptly --seed moth --out moth.zsh
   source ./moth.zsh
   promptly_off                    Restore the previous prompt in that shell
 
-  Export never edits your shell startup files. Requires Node 22+ to generate,
-  zsh 5.8+ to render. Exported prompts need only zsh. Colors target dark themes.
+  Export never edits your shell startup files. The binary needs no Node or Bun
+  installation. Preview and generated prompts use zsh 5.8+. Colors target dark themes.
 `;
 
 function save(file, content, force) {
@@ -83,10 +91,13 @@ function main() {
       width: { type: 'string' }, count: { type: 'string' }, from: { type: 'string' },
       variation: { type: 'string' }, out: { type: 'string' },
       force: { type: 'boolean' }, 'no-color': { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
+      preview: { type: 'boolean' }, version: { type: 'boolean', short: 'v' },
     },
   });
-  if (values.help || !positionals.length) return process.stdout.write(help);
-  const [command] = positionals;
+  if (values.help) return process.stdout.write(help);
+  if (values.version) return process.stdout.write(`promptly ${packageInfo.version}\n`);
+  if (values.preview && positionals.length) throw new Error('--preview is a standalone shortcut; omit the subcommand.');
+  const command = positionals[0] ?? (values.preview ? 'preview' : 'export');
   if (positionals.length > 1) throw new Error('Unexpected positional arguments. See --help.');
   if (command === 'styles') {
     for (const [title, items] of [['COMPOSITIONS', grammars], ['PALETTES', palettes]]) {
@@ -114,7 +125,6 @@ function main() {
     const source = compile(design);
     if (values.out) save(values.out, source, values.force);
     else process.stdout.write(source);
-    process.stderr.write(`Recipe: ${JSON.stringify(recipe(design))}\n`);
   } else if (command === 'inspect' || command === 'mutate') {
     const result = command === 'mutate' ? mutateDesign(design, values.variation ?? randomSeed(), values.scope ?? 'all') : design;
     if (values.program && !result.program) throw new Error('--program requires style compose.');
@@ -139,6 +149,12 @@ function main() {
     process.stdout.write('\n');
   }
 }
+
+process.stdout.on('error', (error) => {
+  if (error.code === 'EPIPE') process.exit(0);
+  process.stderr.write(`promptly: ${error.message}\n`);
+  process.exit(1);
+});
 
 try { main(); }
 catch (error) {

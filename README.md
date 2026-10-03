@@ -12,24 +12,49 @@ earlier ones. No Git, clocks, network calls, or runtime agent.
 · [Connected networks](docs/primitives.png)
 · [Original classic layouts](docs/gallery.png)
 
-```sh
-node bin/promptly.js gallery --seed possibility --label finn --complexity 8 --count 6
-node bin/promptly.js preview --from examples/compose.json
-source examples/compose.zsh
-promptly_off
-```
-
-Generate your own artifact:
+## Install
 
 ```sh
-node bin/promptly.js export --seed spore --complexity 8 --material rounded --out spore.zsh
-source ./spore.zsh
+brew install yungibly/tap/promptly
 ```
 
-Node 22+ generates; zsh 5.8+ renders. No npm dependencies or build step. Generated
-files contain their own renderer and recipe. They work without this repository.
-The CLI never modifies `.zshrc`. Sourcing installs the artwork for that shell;
-`promptly_off` restores its previous prompt and prompt expansion options.
+Or download the standalone binary for macOS or Linux (ARM64 or x86-64) from
+[Releases](https://github.com/yungibly/promptly/releases), extract it, and put
+`promptly` on your `PATH`. No Node, Bun, npm packages, or repository required.
+Previews and generated prompts use zsh 5.8+.
+
+## Generate
+
+```sh
+promptly                    # Print a fresh prompt as sourceable zsh code
+promptly | pbcopy           # Copy it to the macOS clipboard
+promptly > prompt.zsh       # Save it to a file
+source ./prompt.zsh         # Activate it in zsh
+```
+
+Or try one immediately in zsh:
+
+```zsh
+source <(promptly)
+promptly_off                # Restore the previous prompt
+```
+
+Bare `promptly` writes only shell code to stdout, so it works with pipes and
+redirection. The output contains its renderer and recipe and works independently
+of the generator. Each run picks a fresh seed; specify `--seed` to repeat a design.
+The CLI never modifies `.zshrc`. To keep a particular design across shell sessions,
+save it somewhere permanent and source that file from `.zshrc` yourself.
+
+```sh
+promptly --preview --seed spore --complexity 8
+promptly --seed spore --complexity 8 | pbcopy
+promptly gallery --seed possibility --label finn --complexity 8 --count 6
+```
+
+Use the same options to preview and export the same design. `promptly_off` restores
+the previous prompt and prompt expansion options in the current shell.
+
+## Explore
 
 `--engine auto` is the default. It samples an eligible procedural engine and a row
 budget independently of complexity. Galleries balance the available families and
@@ -50,10 +75,10 @@ from the seed; surface overrides are independent. Classic named styles remain op
 with `--style signal`, `reliquary`, `mycelium`, `orrery`, or `xenoweave` (levels 1–5).
 
 ```sh
-node bin/promptly.js inspect --seed growth --complexity 8 --out design.json
-node bin/promptly.js mutate --from design.json --scope ornament --variation 2 --out variant.json
-node bin/promptly.js export --from variant.json --out variant.zsh
-node bin/promptly.js inspect --from design.json --program
+promptly inspect --seed growth --complexity 8 --out design.json
+promptly mutate --from design.json --scope ornament --variation 2 --out variant.json
+promptly --from variant.json --out variant.zsh
+promptly inspect --from design.json --program
 ```
 
 Mutation scopes are `all`, `structure`, and `ornament`. Ornament mutations preserve
@@ -77,11 +102,28 @@ the prompt leaves the terminal background alone. Previews respect `NO_COLOR`.
 
 ## Development
 
+The source CLI runs with Node 22+ and has no npm dependencies:
+
 ```sh
+node bin/promptly.js --preview --seed spore
 npm test
 npm run examples
 TUI_TEST_BIN=.tools/tui-test npm run test:terminal
 ```
+
+Build a standalone binary using [Bun](https://bun.sh/docs/bundler/executables)
+1.4.2 (the version pinned in CI):
+
+```sh
+npm run build
+npm run test:binary
+./dist/promptly --version
+```
+
+The renderer is embedded at build time. Binary tests run outside the repository,
+without Node or Bun on `PATH`, and compare all three engines against the source
+implementation. Compilation and the resulting executable do not autoload `.env`
+files. Release binaries also disable Bun's local config autoloading.
 
 The terminal suite uses the Ghostty backend of
 [microsoft/tui-test](https://github.com/microsoft/tui-test), version
@@ -91,3 +133,4 @@ captures under ignored `artifacts/`. Generated examples are tracked; rerun
 `npm run examples` after changing grammars or the runtime.
 
 Architecture and continuation notes live in [docs/architecture.md](docs/architecture.md).
+Release and tap maintenance are documented in [docs/releases.md](docs/releases.md).

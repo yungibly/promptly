@@ -1,6 +1,6 @@
 {
-  "name": "promptly-art",
-  "version": "0.4.0",
+  "name": "promptly",
+  "version": "0.5.0",
   "description": "A seeded generative art instrument that exports standalone zsh prompts.",
   "type": "module",
   "private": true,
@@ -9,7 +9,10 @@
     "test": "node --test test/*.test.js",
     "gallery": "node bin/promptly.js gallery",
     "examples": "node scripts/examples.js",
-    "test:terminal": "node scripts/terminal-test.js"
+    "test:terminal": "node scripts/terminal-test.js",
+    "build": "bun --no-env-file scripts/build.js",
+    "test:binary": "node scripts/binary-test.js",
+    "release:validate": "node scripts/release.js validate"
   },
   "engines": { "node": ">=22" }
 }

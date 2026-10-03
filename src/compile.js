@@ -23,7 +23,9 @@ function compileScene({ scene, cursor, rightPrompt }) {
 }
 
 export function compile(design) {
-  const runtime = readFileSync(new URL('./runtime.zsh', import.meta.url), 'utf8');
+  // The standalone build injects only this public source template. Node-based
+  // development reads the original; a shipped binary never needs the checkout.
+  const runtime = typeof __PROMPTLY_RUNTIME__ === 'string' ? __PROMPTLY_RUNTIME__ : readFileSync(new URL('./runtime.zsh', import.meta.url), 'utf8');
   return runtime
     .replace('@@RECIPE@@', () => JSON.stringify(recipe(design)))
     .replace('@@COLORS@@', () => design.colors.map(quoteZsh).join(' '))
