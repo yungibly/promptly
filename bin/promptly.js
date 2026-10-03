@@ -21,13 +21,13 @@ const help = `
   promptly styles                 List composition grammars and palettes
 
   --seed TEXT                     Repeatable seed; random when omitted
-  --style NAME                    signal, reliquary, mycelium, orrery
+  --style NAME                    signal, reliquary, mycelium, orrery, xenoweave
   --palette NAME                  phosphor, ultraviolet, ember, abyss
   --complexity 1..5               Ornament budget (default: 3)
   --label TEXT                    Static inscription, up to 20 characters
   --glyphs unicode|ascii           Unicode by default; no Nerd Font required
   --width N                       Preview width (default: terminal width or 100)
-  --count N                       Gallery size (default: 4; maximum: 24)
+  --count N                       Gallery size (default: 5; maximum: 24)
   --from FILE                     Load a saved JSON recipe
   --variation TEXT                Mutation suffix (default: fresh random seed)
   --out FILE                      Export destination; otherwise writes to stdout
@@ -104,7 +104,7 @@ function main() {
     process.stderr.write(`${design.style} / ${design.palette} / seed ${JSON.stringify(design.seed)}\n`);
     process.stdout.write(preview(design, renderOptions));
   } else {
-    const count = integer(values.count, 4, 1, 24, 'Count');
+    const count = integer(values.count, 5, 1, 24, 'Count');
     const styles = Object.keys(grammars);
     const inks = Object.keys(palettes);
     const faint = (s) => color ? `\x1b[38;2;126;133;151m${s}\x1b[0m` : s;

@@ -104,9 +104,14 @@ try {
   check(state().text.endsWith('\n...') && state().cursor.x === 4, 'continuation prompt missing');
   submit('second"');
   check(state().text.includes('\nfirst\nsecond\n'), 'multiline command failed');
+  submit('false');
+  submit('print -r -- "STATUS:$?"');
+  check(state().text.includes('\nSTATUS:1\n'), 'prompt expansion changed the command exit status');
   submit('promptly_off; clear');
   check(state().text.trimEnd() === 'before>', 'original prompt was not restored');
-  console.log('PASS live resize, continuation, and prompt restoration');
+  submit('print -r -- "WIDGET:${+widgets[_promptly_redraw]}"');
+  check(state().text.includes('\nWIDGET:0\n'), 'disabled prompt left its widget registered');
+  console.log('PASS live resize, continuation, exit status, and prompt restoration');
 
   const safe = createDesign({ style: 'reliquary', seed: 'portable', glyphs: 'ascii' });
   writeFileSync(`${output}/ascii.zsh`, compile(safe));

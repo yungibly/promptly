@@ -1,8 +1,11 @@
 # Promptly
 
 A seeded generative art instrument that exports standalone zsh prompts. Static
-inscriptions, alien diagrams, branching filaments, orbital instruments. No Git,
+inscriptions, alien diagrams, branching filaments, orbital instruments, and braided
+runic channels. No Git,
 clocks, network calls, status widgets, or agent required at runtime.
+
+[Five specimens rendered through Ghostty](docs/gallery.png)
 
 ```sh
 node bin/promptly.js gallery --seed first-contact --label finn --complexity 5

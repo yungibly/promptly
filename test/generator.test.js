@@ -140,6 +140,21 @@ test('invalid recipes and options fail clearly', () => {
   assert.throws(() => fromRecipe({ version: 1, seed: 'incomplete' }));
 });
 
+test('xenoweave grows new crossing nodes with each complexity level', () => {
+  for (let complexity = 1; complexity <= 5; complexity++) {
+    const design = createDesign({ seed: 'crossings', style: 'xenoweave', complexity });
+    const text = preview(design, { width: 120, color: false });
+    assert.equal([...text].filter((glyph) => glyph === '╳').length, complexity);
+  }
+});
+
+test('both function and string SIGWINCH handlers remain intact', () => {
+  const source = compile(createDesign({ seed: 'traps' }));
+  for (const handler of ['TRAPWINCH() { print existing; }', "trap 'print existing' WINCH"]) {
+    assert.equal(zsh(`${handler}\n${source}\nkill -WINCH $$\npromptly_off\nkill -WINCH $$\n`), 'existing\nexisting\n');
+  }
+});
+
 test('CLI exports a sourceable artifact and refuses accidental replacement', () => {
   const dir = mkdtempSync(join(tmpdir(), 'promptly-test-'));
   try {

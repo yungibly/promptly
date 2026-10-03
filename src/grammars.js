@@ -1,4 +1,4 @@
-import { Scene, anchor as a, left as l, right as r, middle as m } from './scene.js';
+import { Scene, anchor as a, left as l, right as r } from './scene.js';
 
 const runes = [...'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ'];
 const sigils = ['◈', '◈', '⊙', '⌬', '◇', '⊕'];
@@ -176,11 +176,57 @@ function orrery({ rng, ornament, label, complexity, glyphs }) {
   return { scene: s, cursor: 6, rightPrompt: '· ⊕ ·' };
 }
 
+function xenoweave({ rng, ornament, label, complexity, glyphs }) {
+  const s = new Scene(7, glyphs);
+  // Two differently inked strands trade sides at every crossing. The third,
+  // dotted equator is a common bus; pendant inscriptions identify the knots.
+  // More complexity adds actual junctions, not just additional character noise.
+  const count = complexity;
+  const knots = Array.from({ length: count }, (_, i) =>
+    a(count === 1 ? rng.int(400, 600) : Math.round(170 + i * 660 / (count - 1)) + rng.int(-20, 20)));
+  const ends = [l(2), ...knots, r()];
+  s.text(0, l(1), `╭─⟨ ${label} ⟩`, 2)
+    .text(0, r(), `⟨ ${constellation(rng)}:${serial(rng)} ⟩─╮`, 3, 'right')
+    .text(1, l(1), '│', 1).text(1, r(), '│', 1)
+    .text(2, l(1), '├', 1).text(2, r(), '┤', 1)
+    .text(3, l(1), '╞', 3).text(3, r(), '╡', 3)
+    .text(4, l(1), '├', 1).text(4, r(), '┤', 1)
+    .text(5, l(1), '│', 1).text(5, r(), '╵', 1)
+    .fill(3, l(2), r(), '·', 0);
+  for (let i = 0; i < ends.length - 1; i++) {
+    const from = ends[i], to = ends[i + 1];
+    const upper = i % 2 ? 0 : 1;
+    const lower = i % 2 ? 1 : 0;
+    s.fill(2, from, to, '─', upper).fill(4, from, to, '─', lower);
+    // A midpoint between anchors stays a midpoint at every terminal width.
+    const mid = a(Math.floor((from.at + to.at) / 2));
+    if (i > 0 && i < ends.length - 2) {
+      s.text(3, mid, ` ⟨${ornament.pick(runes)}⟩ `, 2, 'center');
+      if (complexity >= 4) {
+        s.text(0, mid, '· ◇ ·', 0, 'center', 100)
+          .text(5, mid, '⌁', 0, 'center');
+      }
+    }
+  }
+  for (let i = 0; i < knots.length; i++) {
+    const x = knots[i];
+    const ink = i % 2 ? 2 : 3;
+    s.text(1, x, ornament.pick(['╭─◈─╮', '· ⊙ ·', '⟦ ◇ ⟧']), ink, 'center')
+      .text(2, x, '╮ ╭', ink, 'center')
+      .text(3, x, ' ╳ ', 4, 'center')
+      .text(4, x, '╯ ╰', ink, 'center')
+      .text(5, x, `╵ ${ornament.pick(runes)} ╵`, ink, 'center');
+  }
+  s.text(6, l(1), '╰─⟨', 1).text(6, l(4), '◈', 4).text(6, l(5), '⟩', 1);
+  return { scene: s, cursor: 7, rightPrompt: '╵ ⟨ ◈ ⟩ ╵' };
+}
+
 export const grammars = {
   signal: { description: 'Asymmetric relay traces and runic packets', build: signal },
   reliquary: { description: 'An alien seal suspended between inscribed rails', build: reliquary },
   mycelium: { description: 'Branching filaments and bioluminescent spores', build: mycelium },
   orrery: { description: 'Nested orbital instruments and satellite glyphs', build: orrery },
+  xenoweave: { description: 'Braided alien channels with inscribed crossing nodes', build: xenoweave },
 };
 
 export function compact({ glyphs, label, sigil }) {

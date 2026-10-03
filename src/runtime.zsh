@@ -131,6 +131,7 @@ promptly_off() {
   if [[ -o interactive ]]; then
     autoload -Uz add-zle-hook-widget
     add-zle-hook-widget -d line-pre-redraw _promptly_redraw
+    zle -D _promptly_redraw
   fi
   [[ $_promptly_saved_percent == on ]] && setopt promptpercent || unsetopt promptpercent
   [[ $_promptly_saved_subst == on ]] && setopt promptsubst || unsetopt promptsubst

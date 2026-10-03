@@ -48,6 +48,11 @@ input marker. Bound canvas work to 1000 columns. Every drawn glyph must occupy
 one terminal cell, without combining marks, emoji sequences, or control characters.
 ASCII mode preserves geometry using one-character substitutions.
 
+Local measurement on the development Mac (120 columns, complexity-5 xenoweave,
+100 iterations): about 4.7 ms to rebuild and 0.7 ms for a cached prompt expansion.
+The exported specimen is about 13 KB. These are observations, not performance
+guarantees; keep future growth proportional to width and bounded ornament count.
+
 Sourcing stores the original `PROMPT`, `RPROMPT`, `PS2`, and three prompt expansion
 options once. Re-sourcing a different artifact replaces only Promptly's own hooks
 and renderer. `promptly_off` removes those hooks and restores saved values. Promptly
@@ -91,3 +96,12 @@ capture could not draw U+27D0/U+27E1, so replace those with supported diamonds.
 
 Primary references: [zsh prompt expansion](https://zsh.sourceforge.io/Doc/Release/Prompt-Expansion.html)
 and [tui-test CLI](https://github.com/microsoft/tui-test#cli-reference).
+
+## First visual baseline
+
+`docs/gallery.png` is the real Ghostty-backend capture of `first-contact/1` through
+`first-contact/5`, at 120 columns and complexity 5. The tracked signal example
+uses complexity 3 for a shorter everyday version; the gallery deliberately shows
+the maximum ornament budget. The first release passes 14 generator/runtime tests
+and 68 terminal assertions. Captures and the machine-readable terminal report are
+regenerated under `artifacts/terminal/` by `npm run test:terminal`.
