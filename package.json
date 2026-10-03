@@ -1,6 +1,6 @@
 {
   "name": "promptly",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "A seeded generative art instrument that exports standalone zsh prompts.",
   "type": "module",
   "private": true,

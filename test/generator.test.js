@@ -99,7 +99,7 @@ print -r -- "hooks:\${(j:,:)precmd_functions}"
 print -r -- "$options[promptsubst]|$options[promptbang]|$options[promptpercent]"
 print -r -- "\${+_promptly_active}|\${+functions[_promptly_build]}"
 `);
-  assert.equal(output, 'hooks:existing_hook,_promptly_precmd\noriginal> |right|more> \nhooks:existing_hook\non|on|off\n0|0\n');
+  assert.equal(output, 'hooks:existing_hook\noriginal> |right|more> \nhooks:existing_hook\non|on|off\n0|0\n');
 });
 
 test('export builds with only standard zsh functions and no external commands', () => {
@@ -109,18 +109,16 @@ test('export builds with only standard zsh functions and no external commands', 
   assert.doesNotMatch(source.replace(/^\s*#.*$/gm, ''), /`|\beval\b/);
 });
 
-test('width cache avoids work until the terminal changes', () => {
+test('native prompt expansion reflows immediately without runtime callbacks', () => {
   const source = compile(createDesign({ seed: 'resize' }));
   const output = zsh(`COLUMNS=120\n${source}
-typeset old=$_promptly_frame
-_promptly_precmd
-[[ $_promptly_frame == $old ]] && print same
+typeset old=$(print -rnP -- "$PROMPT")
+[[ $(print -rnP -- "$PROMPT") == $old ]] && print same
 COLUMNS=40
-_promptly_precmd
-[[ $_promptly_frame != $old ]] && print changed
-print $_promptly_width
+[[ $(print -rnP -- "$PROMPT") != $old ]] && print changed
+print \${+functions[_promptly_build]}:\${+functions[_promptly_precmd]}:\${+functions[_promptly_redraw]}
 `);
-  assert.equal(output, 'same\nchanged\n40\n');
+  assert.equal(output, 'same\nchanged\n0:0:0\n');
 });
 
 test('untrusted seeds remain comment data; shell quoting round-trips literal text', () => {

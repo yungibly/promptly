@@ -2,7 +2,7 @@
 
 The executable is the existing generator bundled with Bun 1.4.2. Keep the source
 CLI usable with Node 22+; the distributed CLI has no external JavaScript runtime
-dependency. `src/runtime.zsh` is embedded by `scripts/build.js`, with a filesystem
+dependency. The small `src/runtime.zsh` export wrapper is embedded by `scripts/build.js`, with a filesystem
 fallback only when running the source CLI. Do not change the procedural engine
 mix while working on distribution.
 

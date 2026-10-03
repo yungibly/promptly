@@ -14,6 +14,9 @@ procedural families. Complexity should add detail without always increasing size
 
 - No runtime agent, Node process, network, or external command in exported prompts.
 - Previews must exercise the exported zsh renderer. Keep one source of rendering truth.
+- Compile geometry into text in the CLI. Exports use native parameter expansion
+  for responsive padding; do not reintroduce shell drawing loops or prompt-time
+  subprocesses. Keep the legacy renderer in test/fixtures only as a parity oracle.
 - Use width-relative anchors, curated one-cell glyphs, and a reserved input anchor.
 - Do not implement decoration with cursor movement escape sequences. ZLE owns editing.
 - Preserve other hooks; source twice and disable should be safe. Do not edit user rc files.

@@ -31,11 +31,15 @@
   column offset)`. Rows are discrete. A fill's end is exclusive; text supports
   left/center/right alignment. A wire run connects two affine vertices and carries a
   material's 16-glyph connection table. Later text overpaints wires, including spaces.
-- `src/compile.js` and `src/runtime.zsh`: compile scene geometry into calls against
-  a temporary zsh cell canvas. Paint, merge colors, then construct normal `PROMPT`
-  and `RPROMPT` values using zsh's native color escapes. Wire strokes union four
-  direction bits per cell; the final mask selects a cap, corner, tee, or crossing.
-  Junctions therefore agree with the actual viewport, including after resize.
+- `src/flatten.js`: resolve ordered overlays and wire junctions into colored spans
+  in JavaScript. Span boundaries retain affine anchors; wire masks are resolved
+  before export, including width-dependent intersections and clipping.
+- `src/compile.js`: lower spans to literal prompt text and zsh padding expressions.
+  Resolve widths 1–1000 during generation, coalesce adjacent widths with identical
+  string plans, and share repeated rows when that reduces output size. This moves
+  work into the CLI; exported prompts contain no drawing interpreter.
+- `src/runtime.zsh`: small installation/undo wrapper for those strings. Native
+  parameter expansion selects the width case and pads its gaps without a fork.
 - `src/preview.js`: executes the same source in `zsh -f`; no separate art renderer.
 - `bin/promptly.js`: human/agent CLI, JSON recipes, preview, mutation, export.
 
@@ -46,15 +50,20 @@ paints into the editable buffer or moves the cursor manually.
 
 ## Runtime contract
 
-The standalone file needs only zsh builtins and standard autoloaded hook helpers.
+The standalone file needs only zsh builtins.
 It never reads cwd, time, exit status, Git, or network state. Its only changing
-input is `COLUMNS`. Geometry is cached until the width changes; `precmd` and the
-`line-pre-redraw` ZLE hook rebuild when needed. A fixed `PROMPT_SUBST` expression
-prints the cached frame from a zsh subshell (no external executable). On SIGWINCH,
-zsh re-expands the prompt before calling the redraw widget; that expansion also
-checks width and can rebuild in the subshell. This avoids replacing any user
-signal trap. No animation loop. The small shell fork on prompt expansion is the
-intentional tradeoff for correct live resize and signal-handler coexistence.
+input is `COLUMNS`. `PROMPT_SUBST` selects precompiled strings and evaluates only
+parameter padding and integer arithmetic. There are no drawing loops, prompt
+callbacks, redraw widgets, signal traps, or command substitutions. zsh's own
+SIGWINCH prompt expansion immediately recalculates the gaps, so resizing does not
+need a cached canvas or a shell subprocess.
+
+The `(e)` flag expands compiler-authored padding expressions stored in strings.
+Escape literal dollar signs, backticks, and backslashes for exactly that expansion;
+escape percent signs for zsh's subsequent prompt expansion. Shared row expressions
+are explicitly expanded once at the leaf. Never insert recipe fields as shell code.
+Regression tests compare visible cells and colors against the frozen v0.5.1 zsh
+renderer in `test/fixtures`, including overlapping patterns and shell metacharacters.
 
 Known zsh/terminal behavior: drastic shrinking of a multiline prompt can leave
 pieces of its previously printed rows above the active prompt as the terminal
@@ -66,19 +75,23 @@ the visual remnants without clearing command output or hijacking signal traps.
 
 Reserve one terminal column to prevent autowrap. Full art starts at 80 columns;
 28–79 columns use a two-line compact inscription, and smaller windows get a tiny
-input marker. Bound canvas work to 1000 columns. Every drawn glyph must occupy
+input marker. Bound the usable width to 1000 columns. Every drawn glyph must occupy
 one terminal cell, without combining marks, emoji sequences, or control characters.
 ASCII mode preserves geometry using one-character substitutions.
 
-Local measurement on the development Mac (120 columns, complexity-5 xenoweave,
-100 iterations): about 4.7 ms to rebuild and 0.7 ms for a cached prompt expansion.
-The exported specimen is about 13 KB. These are observations, not performance
-guarantees; keep future growth proportional to width and bounded ornament count.
+Local measurement for the user's `a4c43e0e` compact specimen at 120 columns:
+v0.5.1 takes about 1.93 ms to source and 0.775 ms per prompt expansion; v0.6 takes
+about 0.095 ms and 0.030 ms respectively. These are warm, in-process measurements
+over 300 source operations and 1000 `print -rnP` expansions, not total shell startup
+times or portable guarantees. The specimen shrank from 8.8 KB / 211 lines to about
+2.3 KB / 42 lines. Dense layouts can need several width cases; repeated rows are
+shared instead of duplicating an entire frame for every junction change.
 
-Sourcing stores the original `PROMPT`, `RPROMPT`, `PS2`, and three prompt expansion
-options once. Re-sourcing a different artifact replaces only Promptly's own hooks
-and renderer. `promptly_off` removes those hooks and restores saved values. Promptly
-uses `PROMPT_PERCENT` / `PROMPT_SUBST` and disables `PROMPT_BANG` while active.
+Sourcing stores the original `PROMPT`, `RPROMPT`, `PS2`, three prompt expansion
+options, and `MULTIBYTE` once. Re-sourcing a different artifact replaces Promptly's
+own strings. `promptly_off` restores saved values. Sourcing over a pre-0.6 export
+first calls its undo function to retire its old hooks and renderer. Promptly uses
+`PROMPT_PERCENT` / `PROMPT_SUBST` / `MULTIBYTE` and disables `PROMPT_BANG` while active.
 Other prompt managers actively assigning PROMPT in their own hooks may conflict;
 this first version is intended to own the prompt in a shell.
 

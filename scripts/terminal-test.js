@@ -8,6 +8,7 @@ import { compile, quoteZsh } from '../src/compile.js';
 import { preview } from '../src/preview.js';
 import { grammars } from '../src/grammars.js';
 import { gallery } from '../src/gallery.js';
+import { compile as legacy } from '../test/fixtures/legacy-compile.js';
 
 const binary = resolve(process.env.TUI_TEST_BIN || '.tools/tui-test');
 const root = resolve('.');
@@ -50,6 +51,13 @@ try {
   tui('open', '--shell', 'zsh', '--backend', 'ghostty', '--cols', '120', '--rows', '24',
     '--cwd', root, '--env', `ZDOTDIR=${output}/zdot`, '--config', resolve('tui-test.toml'), '--no-wait-ready');
   submit('unset NO_COLOR; PROMPT="before> "; RPROMPT=""; clear');
+  const upgrade = createDesign({ seed: 'upgrade', engine: 'prompt' });
+  writeFileSync(`${output}/legacy.zsh`, legacy(upgrade));
+  writeFileSync(`${output}/upgrade.zsh`, compile(upgrade));
+  submit(`source ${quoteZsh(`${output}/legacy.zsh`)}; print -r -- "LEGACY:\${+widgets[_promptly_redraw]}"`);
+  check(state().text.includes('\nLEGACY:1\n'), 'legacy renderer did not register its redraw widget');
+  submit(`source ${quoteZsh(`${output}/upgrade.zsh`)}; print -r -- "RETIRED:\${+widgets[_promptly_redraw]}:\${+functions[_promptly_expand]}"`);
+  check(state().text.includes('\nRETIRED:0:0\n'), 'new export did not retire the legacy widget and expansion callback');
   for (const style of [...Object.keys(grammars), 'network', 'assembly']) {
     const design = createDesign(JSON.parse(readFileSync(`examples/${style}.json`, 'utf8')));
     submit(`source ${quoteZsh(resolve(`examples/${style}.zsh`))}; clear`);

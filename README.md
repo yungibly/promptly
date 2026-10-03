@@ -41,8 +41,10 @@ promptly_off                # Restore the previous prompt
 ```
 
 Bare `promptly` writes only shell code to stdout, so it works with pipes and
-redirection. The output contains its renderer and recipe and works independently
-of the generator. Each run picks a fresh seed; specify `--seed` to repeat a design.
+redirection. The output contains precompiled colored text, native zsh padding
+expressions for resizing, and its recipe. It works independently of the generator,
+without drawing functions, redraw hooks, or prompt-time subprocesses. Each run
+picks a fresh seed; specify `--seed` to repeat a design.
 The CLI never modifies `.zshrc`. To keep a particular design across shell sessions,
 save it somewhere permanent and source that file from `.zshrc` yourself.
 
@@ -122,7 +124,7 @@ npm run test:binary
 ./dist/promptly --version
 ```
 
-The renderer is embedded at build time. Binary tests run outside the repository,
+The export wrapper is embedded at build time. Binary tests run outside the repository,
 without Node or Bun on `PATH`, and compare all three engines against the source
 implementation. Compilation and the resulting executable do not autoload `.env`
 files. Release binaries also disable Bun's local config autoloading.
