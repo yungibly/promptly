@@ -1,15 +1,19 @@
 {
-  "version": 2,
-  "seed": "possibility/1",
+  "version": 3,
+  "seed": "possibility/43",
   "style": "compose",
-  "palette": "ultraviolet",
-  "complexity": 7,
+  "palette": "ember",
+  "complexity": 8,
   "glyphs": "unicode",
   "label": "finn",
-  "material": "heavy",
-  "alphabet": "technical",
-  "symmetry": "mirror",
+  "material": "square",
+  "alphabet": "punctuation",
+  "symmetry": "none",
   "height": 12,
-  "density": 0.442,
-  "ornamentSeed": "possibility/1"
+  "density": 0.376,
+  "ornamentSeed": "possibility/43",
+  "engine": "assembly",
+  "spread": 0.995,
+  "fragments": 4,
+  "connectivity": 0
 }

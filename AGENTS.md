@@ -16,10 +16,16 @@ space. Git/status/time widgets are outside scope. Docs are for maintainers.
 - Test true terminal behavior with `microsoft/tui-test --backend ghostty`, then inspect PNGs.
   A text snapshot alone cannot detect missing glyphs or poor color. See docs for setup.
 - `npm test`, regenerate examples, and run the terminal suite after runtime changes.
-- Add growth rules as atomic proposals with explicit attachment ports. Preserve
-  graph connectivity and reservations. New growth must remain eligible for rewriting.
+- Default composition must not require a connected graph or a full-width spine.
+  Keep scale, placement, independent fragments, and connections separate choices.
+  Add reusable cell-art operators rather than whole-prompt templates. Preserve
+  fragment reservations; empty space is part of the composition.
+- In the opt-in network engine, add growth rules as atomic proposals with explicit
+  attachment ports. Preserve connectivity within that graph; descendants can grow.
 - Keep topology, material, alphabet, and detail RNG streams independent. An ornament
   mutation must preserve the exact structural derivation.
 - Increase complexity through nested structure and detail while preserving legibility.
+- Judge variety through actual shape and occupied medium, not seeds or colors alone.
+  Check sparse, dense, short, tall, unlinked, and linked specimens in Ghostty.
 
 See `docs/architecture.md` for decisions, constraints, and possible next steps.

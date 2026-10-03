@@ -1,5 +1,6 @@
 import { Scene, anchor as a, left as l, right as r } from './scene.js';
 import { compose } from './compose.js';
+import { assemble } from './assembly.js';
 
 const runes = [...'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ'];
 const sigils = ['◈', '◈', '⊙', '⌬', '◇', '⊕'];
@@ -223,7 +224,7 @@ function xenoweave({ rng, ornament, label, complexity, glyphs }) {
 }
 
 export const grammars = {
-  compose: { description: 'Recursive graph growth from small, theme-free primitives (default)', build: compose },
+  compose: { description: 'Spatial assembly of independent recursive cell art (default)', build: (config) => config.engine === 'network' ? compose(config) : assemble(config) },
   signal: { description: 'Asymmetric relay traces and runic packets', build: signal },
   reliquary: { description: 'An alien seal suspended between inscribed rails', build: reliquary },
   mycelium: { description: 'Branching filaments and bioluminescent spores', build: mycelium },

@@ -7,6 +7,7 @@ import { createDesign } from '../src/design.js';
 import { compile, quoteZsh } from '../src/compile.js';
 import { preview } from '../src/preview.js';
 import { grammars } from '../src/grammars.js';
+import { gallery } from '../src/gallery.js';
 
 const binary = resolve(process.env.TUI_TEST_BIN || '.tools/tui-test');
 const root = resolve('.');
@@ -49,7 +50,7 @@ try {
   tui('open', '--shell', 'zsh', '--backend', 'ghostty', '--cols', '120', '--rows', '24',
     '--cwd', root, '--env', `ZDOTDIR=${output}/zdot`, '--config', resolve('tui-test.toml'), '--no-wait-ready');
   submit('unset NO_COLOR; PROMPT="before> "; RPROMPT=""; clear');
-  for (const style of Object.keys(grammars)) {
+  for (const style of [...Object.keys(grammars), 'network']) {
     const design = createDesign(JSON.parse(readFileSync(`examples/${style}.json`, 'utf8')));
     submit(`source ${quoteZsh(resolve(`examples/${style}.zsh`))}; clear`);
     const first = state();
@@ -57,7 +58,7 @@ try {
     check(first.cursor.y === design.scene.rows - 1, `${style}: prompt must not wrap`);
     check(normalize(first.text) === normalize(preview(design, { width: 120, color: false })), `${style}: preview differs from actual prompt`);
     const cells = JSON.parse(tui('cells', '0', '0', '120', String(design.scene.rows), '--json')).data.cells;
-    check(new Set(cells.map((cell) => cell.fg).filter((fg) => fg !== 'default')).size >= 4, `${style}: missing palette colors`);
+    check(new Set(cells.map((cell) => cell.fg).filter((fg) => fg !== 'default')).size >= (design.engine === 'assembly' ? 2 : 4), `${style}: missing palette colors`);
     snapshot(style);
 
     // Exercise actual ZLE editing, including mutation within the input line.
@@ -75,7 +76,9 @@ try {
     check(wrapped.cursor.y === design.scene.rows, `${style}: long input should wrap exactly once`);
     check(wrapped.cursor.x === (design.cursor + 155) % 120, `${style}: wrapped cursor drifted`);
     // RPROMPT belongs to zsh and should disappear when input reaches it.
-    check(!wrapped.text.includes(design.rightPrompt), `${style}: right ornament collided with long input`);
+    const inputRows = wrapped.text.split('\n').slice(design.scene.rows - 1);
+    const input = inputRows[0].slice(design.cursor).trimEnd() + inputRows.slice(1).map((line) => line.trimEnd()).join('');
+    check(input === `echo ${'x'.repeat(150)}`, `${style}: right ornament collided with long input`);
     press('Ctrl+C', 'Ctrl+L');
     console.log(`PASS ${style}: cells, colors, editing, wrapping, right-prompt clearance`);
   }
@@ -118,12 +121,22 @@ try {
   submit(`source ${quoteZsh(`${output}/ascii.zsh`)}; clear`);
   check(/^[\x20-\x7e\n]*$/.test(state().text), 'ASCII prompt leaked Unicode');
   snapshot('ascii');
+  const specimens = gallery({ seed: 'possibility', label: 'finn', complexity: 8 }, 6);
+  for (const [i, specimen] of specimens.entries()) {
+    const file = `${output}/assembly-${i + 1}.zsh`;
+    writeFileSync(file, compile(specimen));
+    submit(`source ${quoteZsh(file)}; clear`);
+    check(state().cursor.x === specimen.cursor && state().cursor.y === specimen.scene.rows - 1, `${specimen.seed}: cursor drifted`);
+    check(normalize(state().text) === normalize(preview(specimen, { width: 120, color: false })), `${specimen.seed}: preview differs from actual prompt`);
+    snapshot(`assembly-${i + 1}`);
+  }
+  console.log('PASS sparse, textured, linked, mirrored, and layered assembly specimens');
   submit('promptly_off; clear');
-  tui('resize', '120', '58');
-  submit('clear; node bin/promptly.js gallery --seed possibility --label finn --width 120 --height 6 --complexity 7 --count 5');
+  tui('resize', '120', '75');
+  submit('clear; node bin/promptly.js gallery --seed possibility --label finn --width 120 --complexity 8 --count 6');
   snapshot('gallery');
   check(state().text.includes('P R O M P T L Y'), 'gallery did not render');
-  writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, styles: Object.keys(grammars), resizeWidths: [80, 40, 27, 160, 120] }, null, 2) + '\n');
+  writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, styles: [...Object.keys(grammars), 'network'], resizeWidths: [80, 40, 27, 160, 120] }, null, 2) + '\n');
   console.log(`PASS ${checks} assertions. Captures: ${output}`);
 } catch (error) {
   try { snapshot('failure'); } catch { /* Keep the original assertion failure. */ }

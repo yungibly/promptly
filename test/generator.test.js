@@ -169,7 +169,7 @@ test('CLI exports a sourceable artifact and refuses accidental replacement', () 
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('CLI saves, scopes a mutation, inspects its program, and reloads a version-2 recipe', () => {
+test('CLI saves, scopes a mutation, inspects its program, and reloads a version-3 recipe', () => {
   const dir = mkdtempSync(join(tmpdir(), 'promptly-program-'));
   const invoke = (...args) => {
     const result = spawnSync(process.execPath, ['bin/promptly.js', ...args], { encoding: 'utf8' });
@@ -182,7 +182,7 @@ test('CLI saves, scopes a mutation, inspects its program, and reloads a version-
     invoke('mutate', '--from', originalPath, '--scope', 'ornament', '--variation', 'leaves', '--out', variantPath);
     const original = JSON.parse(invoke('inspect', '--from', originalPath, '--program'));
     const variant = JSON.parse(invoke('inspect', '--from', variantPath, '--program'));
-    assert.equal(variant.recipe.version, 2);
+    assert.equal(variant.recipe.version, 3);
     assert.deepEqual(variant.derivation, original.derivation);
     assert.notEqual(variant.recipe.ornamentSeed, original.recipe.ornamentSeed);
     const source = invoke('export', '--from', variantPath);

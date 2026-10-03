@@ -70,18 +70,20 @@ test('recursive ornaments respect their cell budget for every alphabet', () => {
 test('the default is a versioned, reproducible primitive program', () => {
   const design = createDesign({ seed: 'program' });
   assert.equal(design.style, 'compose');
-  assert.equal(design.version, 2);
-  assert.equal(design.program.engine, 'graph-rewrite/1');
+  assert.equal(design.version, 3);
+  assert.equal(design.program.engine, 'spatial-assembly/1');
   assert.equal(compile(design), compile(fromRecipe(recipe(design))));
   assert.throws(() => fromRecipe({ ...recipe(design), version: 1 }));
 });
 
 test('composition controls are validated before planning geometry', () => {
-  for (const options of [{ height: 2 }, { height: 13 }, { height: 4.5 }, { density: 0 }, { density: 1 }, { material: 'constructor' }, { alphabet: '__proto__' }, { symmetry: 'sometimes' }, { ornamentSeed: '' }]) {
+  for (const options of [{ height: 1 }, { height: 13 }, { height: 4.5 }, { density: 0 }, { density: 1 }, { material: 'constructor' }, { alphabet: '__proto__' }, { symmetry: 'sometimes' }, { ornamentSeed: '' }, { engine: 'constructor' }, { spread: -1 }, { spread: 1.1 }, { fragments: 0 }, { fragments: 1.5 }, { connectivity: -1 }, { connectivity: 'NaN' }]) {
     assert.throws(() => createDesign({ seed: 'invalid', ...options }));
   }
   assert.throws(() => createDesign({ style: 'signal', complexity: 10 }));
   assert.throws(() => createDesign({ style: 'signal', material: 'heavy' }));
+  assert.throws(() => createDesign({ engine: 'network', height: 2 }));
+  assert.throws(() => createDesign({ engine: 'network', spread: 0.5 }));
 });
 
 test('surface overrides and detail mutations leave topology exactly unchanged', () => {
@@ -106,7 +108,7 @@ test('64 seeds grow varied, connected graphs with bounded, replayable recursive 
   const observed = new Set();
   let deepest = 0;
   for (let i = 0; i < 64; i++) {
-    const design = createDesign({ seed: `growth/${i}`, complexity: 8 });
+    const design = createDesign({ seed: `growth/${i}`, complexity: 8, engine: 'network' });
     const { program } = design;
     assert.equal(program.stats.components, 1);
     assert.ok(program.stats.rewrites <= 35);
@@ -132,7 +134,7 @@ test('64 seeds grow varied, connected graphs with bounded, replayable recursive 
 });
 
 test('reflection is a geometric transformation of the generated graph', () => {
-  const design = createDesign({ seed: 'bilateral', symmetry: 'mirror', complexity: 8 });
+  const design = createDesign({ seed: 'bilateral', symmetry: 'mirror', complexity: 8, engine: 'network' });
   const network = new Network(41, design.height - 1);
   for (const step of design.program.derivation) {
     if (step.remove) network.remove(step.remove);
@@ -153,7 +155,8 @@ test('the most complex programs fit narrow/wide terminals and preserve ASCII par
     for (const width of [80, 81, 120, 200]) {
       const a = preview(design, { width, color: false });
       const b = preview(ascii, { width, color: false });
-      assert.equal(a.trimEnd().split('\n').length, 12);
+      assert.equal(a.trimEnd().split('\n').length, design.scene.rows);
+      assert.ok(design.scene.rows <= 12 && design.scene.rows >= 2);
       assert.ok(a.split('\n').every((line) => [...line].length < width));
       assert.deepEqual(a.split('\n').map((line) => [...line].length), b.split('\n').map((line) => line.length));
       assert.match(b, /^[\x20-\x7e\n]*$/);

@@ -20,28 +20,44 @@ export function createDesign(options = {}) {
   if (typeof label !== 'string' || !/^[A-Za-z0-9 ._/:~+-]{1,20}$/.test(label)) throw new Error('Label must be 1–20 simple printable characters (letters, digits, spaces, . _ / : ~ + -).');
   const config = { seed, style, palette, complexity, glyphs, label };
   if (style === 'compose') {
+    const engine = options.engine ?? (options.version === 2 ? 'network' : 'assembly');
+    if (!['assembly', 'network'].includes(engine)) throw new Error('Engine must be assembly or network.');
     const material = options.material ?? random(seed, 'trait:material').pick(Object.keys(materials));
     // Runes remain available explicitly; they no longer define the default look.
     const alphabet = options.alphabet ?? random(seed, 'trait:alphabet').pick(['geometric', 'punctuation', 'technical', 'granular']);
-    const symmetry = options.symmetry ?? (random(seed, 'trait:symmetry').chance(0.3) ? 'mirror' : 'none');
-    const height = Number(options.height ?? random(seed, 'trait:height').int(Math.min(4 + Math.floor(complexity / 3), 8), Math.min(5 + complexity, 12)));
+    const symmetry = options.symmetry ?? (random(seed, 'trait:symmetry').chance(engine === 'network' ? 0.3 : 0.15) ? 'mirror' : 'none');
+    const height = Number(options.height ?? (engine === 'network'
+      ? random(seed, 'trait:height').int(Math.min(4 + Math.floor(complexity / 3), 8), Math.min(5 + complexity, 12))
+      : random(seed, 'trait:height').int(2, Math.min(4 + complexity, 12))));
     const density = Number(options.density ?? (0.3 + random(seed, 'trait:density').next() * 0.35).toFixed(3));
     const ornamentSeed = String(options.ornamentSeed ?? seed);
     if (!Object.hasOwn(materials, material)) throw new Error(`Unknown material: ${material}. Choose ${Object.keys(materials).join(', ')}.`);
     if (!Object.hasOwn(alphabets, alphabet)) throw new Error(`Unknown alphabet: ${alphabet}. Choose ${Object.keys(alphabets).join(', ')}.`);
     if (!['none', 'mirror'].includes(symmetry)) throw new Error('Symmetry must be none or mirror.');
-    if (!Number.isInteger(height) || height < 4 || height > 12) throw new Error('Height must be an integer from 4 to 12.');
+    if (!Number.isInteger(height) || height < (engine === 'network' ? 4 : 2) || height > 12) throw new Error(`Height must be an integer from ${engine === 'network' ? 4 : 2} to 12.`);
     if (!Number.isFinite(density) || density < 0.15 || density > 0.85) throw new Error('Density must be between 0.15 and 0.85.');
     if (!ornamentSeed.length || ornamentSeed.length > 256) throw new Error('Ornament seed must contain 1–256 characters.');
-    Object.assign(config, { material, alphabet, symmetry, height, density, ornamentSeed });
-  } else if (['material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed'].some((key) => options[key] !== undefined)) {
-    throw new Error('Material, alphabet, symmetry, height, density, and scoped mutations require style compose.');
+    Object.assign(config, { engine, material, alphabet, symmetry, height, density, ornamentSeed });
+    if (engine === 'assembly') {
+      const spread = Number(options.spread ?? (0.2 + random(seed, 'trait:spread').next() * 0.8).toFixed(3));
+      const fragments = Number(options.fragments ?? random(seed, 'trait:fragments').pick([1, 1, 2, 3, 4, 5, 7, 9, 12]));
+      const connectionRng = random(seed, 'trait:connectivity');
+      const connectivity = Number(options.connectivity ?? (connectionRng.chance(0.7) ? 0 : connectionRng.next().toFixed(3)));
+      if (!Number.isFinite(spread) || spread < 0 || spread > 1) throw new Error('Spread must be between 0 and 1.');
+      if (!Number.isInteger(fragments) || fragments < 1 || fragments > 12) throw new Error('Fragments must be an integer from 1 to 12.');
+      if (!Number.isFinite(connectivity) || connectivity < 0 || connectivity > 1) throw new Error('Connectivity must be between 0 and 1.');
+      Object.assign(config, { spread, fragments, connectivity });
+    } else if (['spread', 'fragments', 'connectivity'].some((key) => options[key] !== undefined)) {
+      throw new Error('Spread, fragments, and connectivity require engine assembly.');
+    }
+  } else if (['engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed', 'spread', 'fragments', 'connectivity'].some((key) => options[key] !== undefined)) {
+    throw new Error('Composition controls and scoped mutations require style compose.');
   }
   const context = { ...config, rng: random(seed, `structure:${style}`), ornament: random(config.ornamentSeed ?? seed, `ornament:${style}`) };
   const composition = grammars[style].build(context);
   if (glyphs === 'ascii') composition.rightPrompt = ascii(composition.rightPrompt);
   return {
-    version: style === 'compose' ? 2 : 1,
+    version: style === 'compose' ? (config.engine === 'assembly' ? 3 : 2) : 1,
     ...config,
     colors: palettes[palette].colors,
     ...composition,
@@ -52,15 +68,19 @@ export function createDesign(options = {}) {
 export function recipe(design) {
   const { version, seed, style, palette, complexity, glyphs, label } = design;
   const value = { version, seed, style, palette, complexity, glyphs, label };
-  if (version === 2) for (const key of ['material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed']) value[key] = design[key];
+  if (version >= 2) for (const key of ['material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed']) value[key] = design[key];
+  if (version === 3) for (const key of ['engine', 'spread', 'fragments', 'connectivity']) value[key] = design[key];
   return value;
 }
 
 export function fromRecipe(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || ![1, 2].includes(value.version)) throw new Error('Expected a Promptly recipe with version 1 or 2.');
-  if ((value.style === 'compose') !== (value.version === 2)) throw new Error('Composed recipes require version 2; classic recipes require version 1.');
+  if (!value || typeof value !== 'object' || Array.isArray(value) || ![1, 2, 3].includes(value.version)) throw new Error('Expected a Promptly recipe with version 1, 2, or 3.');
+  if ((value.style === 'compose') !== (value.version >= 2)) throw new Error('Composed recipes require version 2 or 3; classic recipes require version 1.');
+  if (value.version === 3 && value.engine !== 'assembly') throw new Error('Version 3 recipes require engine assembly.');
+  if (value.version === 2 && value.engine !== undefined && value.engine !== 'network') throw new Error('Version 2 recipes require engine network.');
   const keys = ['version', 'seed', 'style', 'palette', 'complexity', 'glyphs', 'label'];
-  if (value.version === 2) keys.push('material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed');
+  if (value.version >= 2) keys.push('material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed');
+  if (value.version === 3) keys.push('engine', 'spread', 'fragments', 'connectivity');
   if (keys.some((key) => !Object.hasOwn(value, key))) throw new Error('Recipe is incomplete.');
   return createDesign(value);
 }
