@@ -23,11 +23,11 @@ test('cell algebra composes diagonals, repetitions, intersections, reflection, a
   assert.deepEqual(clippedFlip, flipped, 'masking must transform direction bits as well as positions');
 });
 
-test('256 default seeds vary silhouette, occupied medium, scale, and fragmentation', () => {
+test('256 assembly seeds vary silhouette, occupied medium, scale, and fragmentation', () => {
   const counts = { unlinked: 0, noStrokes: 0, texture: 0, short: 0, tall: 0, small: 0, broad: 0, single: 0, many: 0 };
   const forms = new Set();
   for (let i = 0; i < 256; i++) {
-    const design = createDesign({ seed: `assembly/${i}`, complexity: 8 });
+    const design = createDesign({ engine: 'assembly', seed: `assembly/${i}`, complexity: 8 });
     const s = design.program.stats;
     counts.unlinked += s.links === 0; counts.noStrokes += !s.operations.stroke; counts.texture += !!s.operations.pixel;
     counts.short += design.scene.rows <= 3; counts.tall += design.scene.rows >= 8;
@@ -45,7 +45,7 @@ test('256 default seeds vary silhouette, occupied medium, scale, and fragmentati
 
 test('fragment reservations stay disjoint and in bounds as terminal width increases', () => {
   for (let i = 0; i < 128; i++) {
-    const design = createDesign({ seed: `bounds/${i}`, complexity: 10, height: 12, connectivity: 0 });
+    const design = createDesign({ engine: 'assembly', seed: `bounds/${i}`, complexity: 10, height: 12, connectivity: 0 });
     const { pieces, links } = design.program.derivation;
     assert.equal(links.length, 0);
     for (const piece of pieces) for (const cell of rasterize(piece.tree).values()) {
@@ -67,7 +67,7 @@ test('fragment reservations stay disjoint and in bounds as terminal width increa
 });
 
 test('mirrored assemblies reflect geometry while text remains independently readable', () => {
-  const design = createDesign({ seed: 'mirror-pieces', symmetry: 'mirror', height: 10, complexity: 9 });
+  const design = createDesign({ engine: 'assembly', seed: 'mirror-pieces', symmetry: 'mirror', height: 10, complexity: 9 });
   const { pieces, zone } = design.program.derivation;
   for (let i = 0; i < pieces.length; i += 2) {
     const a = pieces[i], b = pieces[i + 1], reflected = rasterize(b.tree);
@@ -82,7 +82,7 @@ test('mirrored assemblies reflect geometry while text remains independently read
 test('maximum density, optional links, row compaction, and short assemblies use the real renderer', () => {
   let links = 0;
   for (let i = 0; i < 12; i++) {
-    const design = createDesign({ seed: `render/${i}`, height: i % 2 ? 12 : 2, spread: 1, fragments: 6, connectivity: 1, density: 0.85, complexity: 10 });
+    const design = createDesign({ engine: 'assembly', seed: `render/${i}`, height: i % 2 ? 12 : 2, spread: 1, fragments: 6, connectivity: 1, density: 0.85, complexity: 10 });
     links += design.program.stats.links;
     const portable = createDesign({ ...recipe(design), glyphs: 'ascii' });
     for (const width of [80, 81, 160]) {
@@ -101,7 +101,7 @@ test('maximum density, optional links, row compaction, and short assemblies use 
 });
 
 test('galleries select deterministic geometric variety independently of palette and glyph fallback', () => {
-  const options = { seed: 'gallery-variety', complexity: 8 };
+  const options = { engine: 'assembly', seed: 'gallery-variety', complexity: 8 };
   const designs = gallery(options, 6), seeds = designs.map((d) => d.seed);
   assert.equal(new Set(seeds).size, 6);
   assert.deepEqual(gallery(options, 6).map((d) => d.seed), seeds);

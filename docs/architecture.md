@@ -2,7 +2,7 @@
 
 ## Pipeline
 
-`recipe -> spatial partitions + recursive cell art -> ornament expressions -> responsive cell scene -> zsh compiler -> standalone artwork`
+`seed/options -> engine + footprint sampling -> primitive program -> ornament expressions -> responsive cell scene -> zsh compiler -> standalone prompt`
 
 - `src/random.js`: stable integer RNG seeded through SHA-256. Independent streams
   isolate palette, structure, and ornament choices.
@@ -11,12 +11,17 @@
 - `src/marks.js`: small cell-art algebra: stroke (including diagonals), mark, pixel,
   text slot, group, translation, reflection, repetition, clipping, and subtraction.
   Geometry is rasterized during generation, then emitted into the shared cell IR.
-- `src/assembly.js`: the default generator. Partitions a seeded spatial region,
+- `src/design.js`: automatic engine sampling, compatible controls, resolved traits,
+  versioned recipes, and scoped mutation. Automatic mode is a selection policy.
+- `src/prompt.js`: compact role-based composition. Local decoration grows around
+  label bounds and the input marker within 1–3 rows, with optional right accents.
+- `src/assembly.js`: freeform composition. Partitions a seeded spatial region,
   generates independent recursive pieces, optionally links eligible neighbors,
   decorates them, and removes unused vertical margins. No mandatory backbone.
-- `src/gallery.js`: deterministic farthest-point selection over geometric features;
+- `src/gallery.js`: balances engine representation, then deterministically selects
+  distant specimens using geometric features;
   palettes and alphabets do not substitute for different silhouettes.
-- `src/compose.js`: the opt-in network generator. Starts with a seeded route and recursively
+- `src/compose.js`: the network generator. Starts with a seeded route and recursively
   rewrites its segments using detour, loop, branch, fork, stitch, and repeat. The
   derivation records each operation's parent, depth, paths, and optional removal.
 - `src/ornaments.js`: tiny expression trees: atom, sequence, enclosure, repetition,
@@ -82,9 +87,46 @@ in a comment. No shell eval. The IR does not accept arbitrary code or terminal
 escape sequences. Version 1 recipes retain the classic grammar fields. Version 2
 adds resolved material, alphabet, symmetry, height, density, and ornament seed for
 `graph-rewrite/1`. Version 3 selects `spatial-assembly/1` and adds engine, spread,
-fragments, and connectivity. Loading version 2 still selects the unchanged network
-generator. Resolved recipe values freeze all sampled controls. A regression test
-hashes the previous network scene and derivation, independently of runtime source.
+fragments, and connectivity. Version 4 uses the same control fields for
+`prompt-composition/1`. Loading versions 2 and 3 still selects their unchanged
+generators. Resolved recipes freeze the engine and all sampled controls;
+`auto` is never stored as an unresolved renderer. Regression tests hash the previous
+network and assembly scenes and derivations independently of runtime source.
+
+## Sampling and compact prompt composition
+
+The user's correction after the freeform experiment: all of these directions are
+desirable possibilities, but each iteration must not make one look universal.
+Freeform art also does not replace a composition that feels integrated into a
+shell prompt. Keep compact, connected, and freeform engines in automatic sampling.
+
+`auto` filters engines by explicit controls, then selects with a dedicated seeded
+RNG stream. Prompt supports 1–3 rows, assembly 2–12, and network 4–12. Explicit
+spread/fragments/connectivity exclude network because it has different semantics.
+Automatic row budgets are sampled separately from complexity, including small and
+large footprints. Explicit engine selection preserves that engine's own defaults;
+saved recipe values always take precedence. Mutation keeps the resolved engine.
+
+Compact construction begins with label and input roles. A band of bounded tokens
+contains the label, nested delimiter pairs, optional short joins, and recursive
+micro-expressions. Extra rows provide a cap above/below the inscription or a fold
+into the input marker. Caps may be open, beveled, or cut. Geometry uses the same
+stroke/group/cut algebra as assembly; decorations never occupy an independent
+central canvas. Local symmetry balances caps, while inscriptions remain readable.
+
+The label band fits in 44 leftmost columns, with a smaller budget on single-row
+prompts. Input always ends with a recognizable introducer and one space. A native
+RPROMPT and a short right-hand inscription are optional; the latter shares the
+label baseline and can receive a sampled bridge. Reserved token capacities keep
+ornament mutation from shifting input or changing geometry. Material and alphabet
+overrides remain independent of the role derivation.
+
+Mixed galleries draw a candidate pool, select from the least-represented eligible
+engine first, then maximize geometric distance within that set. Six specimens
+therefore include two from each available engine when the pool contains all three.
+Fixed-engine galleries still explore variations within that engine. Changing color
+or ASCII fallback does not change selection. This policy exposes multiple families
+without introducing a catalogue of fixed finished prompts.
 
 ## Spatial assembly mechanics
 
@@ -236,7 +278,7 @@ engine. The property tests replay 64 structurally distinct connected derivations
 `docs/assembly.png` is the actual Ghostty capture of six geometrically selected
 `possibility` descendants at complexity 8, 120 columns, and their natural row
 budgets. It includes sparse inscriptions, repeated diagonal figures, raster
-textures, optional links, and layered independent contours. `examples/compose.*`
+textures, optional links, and layered independent contours. `examples/assembly.*`
 stores `possibility/43`; `examples/network.*` preserves the former default.
 
 This release passes 32 automated tests and 98 Ghostty assertions. The terminal
@@ -253,3 +295,24 @@ angular. A high complexity budget permits recursion but does not force dense art
 Fragments keep fixed local proportions as terminal gaps expand. Tiny terminals
 still use the shared compact fallback. Drastic shrink can still leave old art in
 terminal scrollback; active input remains correct, as described above.
+
+## Mixed exploration and compact prompt baseline
+
+`docs/possibilities.png` captures the default mixed gallery: `possibility`, six
+specimens, complexity 8, at 120 columns. `docs/prompts.png` focuses on the new
+compact engine with seed `closely`. Both are actual Ghostty-backend captures.
+`examples/compose.*` now stores a compact specimen (`closely/6`); the version-2
+network and version-3 assembly examples remain separate and unchanged.
+
+This release passes 38 automated tests and 111 Ghostty assertions. Added checks
+cover all three families in automatic sampling, balanced galleries, independent
+footprint/detail budgets, compact role proximity across 192 seeds, readable
+20-character inscriptions, native right prompts, surface/detail independence,
+and exact old recipe geometry. Terminal checks include single-row command entry,
+long-line wrapping, normal command execution, and six live mixed specimens.
+
+Continue expanding the space rather than treating any one engine as the answer.
+Potential next work: compose compact role geometry with bounded sections of the
+network rewrite engine; add more role-local transforms and useful cross-engine
+operators. Preserve meaningful attachment to the command line when generating
+compact prompts, while keeping detached artwork possible elsewhere in the space.

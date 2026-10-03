@@ -50,7 +50,7 @@ try {
   tui('open', '--shell', 'zsh', '--backend', 'ghostty', '--cols', '120', '--rows', '24',
     '--cwd', root, '--env', `ZDOTDIR=${output}/zdot`, '--config', resolve('tui-test.toml'), '--no-wait-ready');
   submit('unset NO_COLOR; PROMPT="before> "; RPROMPT=""; clear');
-  for (const style of [...Object.keys(grammars), 'network']) {
+  for (const style of [...Object.keys(grammars), 'network', 'assembly']) {
     const design = createDesign(JSON.parse(readFileSync(`examples/${style}.json`, 'utf8')));
     submit(`source ${quoteZsh(resolve(`examples/${style}.zsh`))}; clear`);
     const first = state();
@@ -58,7 +58,7 @@ try {
     check(first.cursor.y === design.scene.rows - 1, `${style}: prompt must not wrap`);
     check(normalize(first.text) === normalize(preview(design, { width: 120, color: false })), `${style}: preview differs from actual prompt`);
     const cells = JSON.parse(tui('cells', '0', '0', '120', String(design.scene.rows), '--json')).data.cells;
-    check(new Set(cells.map((cell) => cell.fg).filter((fg) => fg !== 'default')).size >= (design.engine === 'assembly' ? 2 : 4), `${style}: missing palette colors`);
+    check(new Set(cells.map((cell) => cell.fg).filter((fg) => fg !== 'default')).size >= (['assembly', 'prompt'].includes(design.engine) ? 2 : 4), `${style}: missing palette colors`);
     snapshot(style);
 
     // Exercise actual ZLE editing, including mutation within the input line.
@@ -123,20 +123,39 @@ try {
   snapshot('ascii');
   const specimens = gallery({ seed: 'possibility', label: 'finn', complexity: 8 }, 6);
   for (const [i, specimen] of specimens.entries()) {
-    const file = `${output}/assembly-${i + 1}.zsh`;
+    const file = `${output}/specimen-${i + 1}.zsh`;
     writeFileSync(file, compile(specimen));
     submit(`source ${quoteZsh(file)}; clear`);
     check(state().cursor.x === specimen.cursor && state().cursor.y === specimen.scene.rows - 1, `${specimen.seed}: cursor drifted`);
     check(normalize(state().text) === normalize(preview(specimen, { width: 120, color: false })), `${specimen.seed}: preview differs from actual prompt`);
-    snapshot(`assembly-${i + 1}`);
+    snapshot(`specimen-${i + 1}`);
   }
-  console.log('PASS sparse, textured, linked, mirrored, and layered assembly specimens');
+  // Exercise a one-row prompt as an actual editable shell, including RPROMPT
+  // clearance and long input. Gallery parity alone cannot establish this.
+  const single = createDesign({ engine: 'prompt', seed: 'single-entry', height: 1, complexity: 10, label: 'finn' });
+  writeFileSync(`${output}/single.zsh`, compile(single));
+  submit(`source ${quoteZsh(`${output}/single.zsh`)}; clear`);
+  check(state().cursor.x === single.cursor && state().cursor.y === 0, 'single-row input anchor drifted');
+  tui('type', `echo ${'x'.repeat(150)}`);
+  settle();
+  check(state().cursor.y === 1 && state().cursor.x === (single.cursor + 155) % 120, 'single-row wrapping drifted');
+  press('Ctrl+C', 'Ctrl+L');
+  submit('echo ready');
+  check(state().text.includes('\nready\n'), 'single-row command failed');
+  tui('type', 'echo next');
+  snapshot('compact-in-use');
+  press('Ctrl+C');
+  console.log('PASS compact entry/editing plus all three procedural families');
   submit('promptly_off; clear');
-  tui('resize', '120', '75');
+  tui('resize', '120', '68');
   submit('clear; node bin/promptly.js gallery --seed possibility --label finn --width 120 --complexity 8 --count 6');
   snapshot('gallery');
   check(state().text.includes('P R O M P T L Y'), 'gallery did not render');
-  writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, styles: [...Object.keys(grammars), 'network'], resizeWidths: [80, 40, 27, 160, 120] }, null, 2) + '\n');
+  tui('resize', '120', '45');
+  submit('clear; node bin/promptly.js gallery --engine prompt --seed closely --label finn --width 120 --complexity 8 --count 6');
+  snapshot('prompt-gallery');
+  check(state().text.includes('P R O M P T L Y'), 'compact gallery did not render');
+  writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, styles: [...Object.keys(grammars), 'network', 'assembly'], resizeWidths: [80, 40, 27, 160, 120] }, null, 2) + '\n');
   console.log(`PASS ${checks} assertions. Captures: ${output}`);
 } catch (error) {
   try { snapshot('failure'); } catch { /* Keep the original assertion failure. */ }

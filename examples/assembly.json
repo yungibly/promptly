@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "seed": "possibility/43",
+  "style": "compose",
+  "palette": "ember",
+  "complexity": 8,
+  "glyphs": "unicode",
+  "label": "finn",
+  "material": "square",
+  "alphabet": "punctuation",
+  "symmetry": "none",
+  "height": 12,
+  "density": 0.376,
+  "ornamentSeed": "possibility/43",
+  "engine": "assembly",
+  "spread": 0.995,
+  "fragments": 4,
+  "connectivity": 0
+}

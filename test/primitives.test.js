@@ -67,17 +67,17 @@ test('recursive ornaments respect their cell budget for every alphabet', () => {
   for (const charset of Object.values(materials)) assert.equal([...charset].length, 16);
 });
 
-test('the default is a versioned, reproducible primitive program', () => {
-  const design = createDesign({ seed: 'program' });
+test('compact prompts have a versioned, reproducible primitive program', () => {
+  const design = createDesign({ seed: 'program', engine: 'prompt' });
   assert.equal(design.style, 'compose');
-  assert.equal(design.version, 3);
-  assert.equal(design.program.engine, 'spatial-assembly/1');
+  assert.equal(design.version, 4);
+  assert.equal(design.program.engine, 'prompt-composition/1');
   assert.equal(compile(design), compile(fromRecipe(recipe(design))));
   assert.throws(() => fromRecipe({ ...recipe(design), version: 1 }));
 });
 
 test('composition controls are validated before planning geometry', () => {
-  for (const options of [{ height: 1 }, { height: 13 }, { height: 4.5 }, { density: 0 }, { density: 1 }, { material: 'constructor' }, { alphabet: '__proto__' }, { symmetry: 'sometimes' }, { ornamentSeed: '' }, { engine: 'constructor' }, { spread: -1 }, { spread: 1.1 }, { fragments: 0 }, { fragments: 1.5 }, { connectivity: -1 }, { connectivity: 'NaN' }]) {
+  for (const options of [{ height: 0 }, { height: 13 }, { height: 4.5 }, { density: 0 }, { density: 1 }, { material: 'constructor' }, { alphabet: '__proto__' }, { symmetry: 'sometimes' }, { ornamentSeed: '' }, { engine: 'constructor' }, { spread: -1 }, { spread: 1.1 }, { fragments: 0 }, { fragments: 1.5 }, { connectivity: -1 }, { connectivity: 'NaN' }]) {
     assert.throws(() => createDesign({ seed: 'invalid', ...options }));
   }
   assert.throws(() => createDesign({ style: 'signal', complexity: 10 }));

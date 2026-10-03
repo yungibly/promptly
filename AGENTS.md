@@ -7,6 +7,11 @@ classic compatibility options. Prefer interoperable geometry and ornament
 operations over more full-prompt templates. Preserve controlled color and negative
 space. Git/status/time widgets are outside scope. Docs are for maintainers.
 
+User clarification: connected networks, large freeform art, and compact integrated
+prompts should all remain possibilities. Do not replace the entire sampling space
+with the latest experiment. Automatic sampling and galleries must retain all
+procedural families. Complexity should add detail without always increasing size.
+
 - No runtime agent, Node process, network, or external command in exported prompts.
 - Previews must exercise the exported zsh renderer. Keep one source of rendering truth.
 - Use width-relative anchors, curated one-cell glyphs, and a reserved input anchor.
@@ -27,5 +32,8 @@ space. Git/status/time widgets are outside scope. Docs are for maintainers.
 - Increase complexity through nested structure and detail while preserving legibility.
 - Judge variety through actual shape and occupied medium, not seeds or colors alone.
   Check sparse, dense, short, tall, unlinked, and linked specimens in Ghostty.
+- Compact prompt geometry must attach to the label or input roles, stay in 1–3
+  rows, and preserve readable text and command-entry space. Keep the larger
+  assembly and network engines available and covered by recipe regression tests.
 
 See `docs/architecture.md` for decisions, constraints, and possible next steps.

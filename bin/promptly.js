@@ -24,17 +24,18 @@ const help = `
 
   --seed TEXT                     Repeatable seed; random when omitted
   --style NAME                    compose (default), or a classic named grammar
-  --engine assembly|network       Free spatial assembly (default), or connected growth
+  --engine auto|prompt|assembly|network
+                                  Mixed exploration by default, or focus one engine
   --palette NAME                  phosphor, ultraviolet, ember, abyss
   --complexity 1..10               Growth/detail budget (default: 3; classic: 1..5)
   --material NAME                 rounded, square, double, heavy, dashed
   --alphabet NAME                 geometric, punctuation, technical, granular, runic
   --symmetry none|mirror           Reflect the composition, or keep it asymmetric
-  --height 2..12                   Row budget; empty margins are trimmed (network: 4+)
-  --spread 0..1                    Horizontal extent of the assembly
-  --fragments 1..12                Target number of independent regions
+  --height 1..12                   Row budget: prompt 1–3, assembly 2–12, network 4–12
+  --spread 0..1                    Extent/right accents (prompt or assembly)
+  --fragments 1..12                Ornament/region target (prompt or assembly)
   --connectivity 0..1              Chance of linking eligible neighbors (often 0)
-  --density 0.15..0.85             Field density; network occupancy target
+  --density 0.15..0.85             Detail/field density; network occupancy target
   --label TEXT                    Static inscription, up to 20 characters
   --glyphs unicode|ascii           Unicode by default; no Nerd Font required
   --width N                       Preview width (default: terminal width or 100)
@@ -92,7 +93,7 @@ function main() {
       process.stdout.write(`\n${title}\n`);
       for (const [name, data] of Object.entries(items)) process.stdout.write(`  ${name.padEnd(14)} ${data.description}\n`);
     }
-    process.stdout.write(`\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
+    process.stdout.write(`\nENGINES\n  auto (mixed), prompt (compact), assembly (freeform), network (connected)\n\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
     return;
   }
   if (!['preview', 'gallery', 'export', 'inspect', 'mutate'].includes(command)) throw new Error(`Unknown command: ${command}. See --help.`);
@@ -121,7 +122,7 @@ function main() {
     if (values.out) save(values.out, json, values.force);
     else process.stdout.write(json);
   } else if (command === 'preview') {
-    process.stderr.write(`${design.style} / ${design.palette} / seed ${JSON.stringify(design.seed)}\n`);
+    process.stderr.write(`${design.engine ?? design.style} / ${design.palette} / seed ${JSON.stringify(design.seed)}\n`);
     process.stdout.write(preview(design, renderOptions));
   } else {
     const count = integer(values.count, 5, 1, 24, 'Count');
