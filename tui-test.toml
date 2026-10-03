@@ -1,0 +1,10 @@
+[profiles.default.colors]
+background = "#272936"
+foreground = "#e1e4ed"
+
+[trace]
+mode = "on-failure"
+directory = "./artifacts/traces"
+
+[recording]
+directory = "./artifacts/casts"

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "seed": "first-contact/1",
+  "style": "signal",
+  "palette": "phosphor",
+  "complexity": 3,
+  "glyphs": "unicode",
+  "label": "finn"
+}
