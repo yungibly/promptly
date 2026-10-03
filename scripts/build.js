@@ -5,9 +5,9 @@ import { parseArgs } from 'node:util';
 
 if (!globalThis.Bun) throw new Error('Build with Bun: bun --no-env-file scripts/build.js');
 const root = fileURLToPath(new URL('../', import.meta.url));
-const targets = ['bun-darwin-arm64', 'bun-darwin-x64', 'bun-linux-arm64-musl', 'bun-linux-x64-musl'];
+const targets = ['bun-darwin-arm64', 'bun-darwin-x64', 'bun-linux-arm64', 'bun-linux-x64'];
 const { values } = parseArgs({ options: { target: { type: 'string' }, out: { type: 'string' } } });
-const target = values.target ?? `bun-${process.platform}-${process.arch}${process.platform === 'linux' ? '-musl' : ''}`;
+const target = values.target ?? `bun-${process.platform}-${process.arch}`;
 if (!targets.includes(target)) throw new Error(`Unsupported target: ${target}. Choose ${targets.join(', ')}.`);
 const outfile = resolve(values.out ?? `${root}/dist/promptly`);
 mkdirSync(dirname(outfile), { recursive: true });

@@ -18,7 +18,9 @@ mix while working on distribution.
 4. Watch the Release workflow through the final tap update, not just publication.
 
 CI uses macOS ARM64, macOS Intel, Linux ARM64, and Linux x86-64 runners to compile,
-test, and package each executable natively. Linux builds use Bun's musl target.
+test, and package each executable natively. Linux builds use Bun's glibc targets,
+matching the Homebrew runners and ordinary Debian/Ubuntu/Fedora installations.
+Bun's musl variants need a musl loader and are not suitable for those systems.
 `scripts/binary-test.js` copies the executable to an isolated temporary directory,
 removes external runtimes from `PATH` for generation, checks exact output against
 Node for all engines, sources the generated zsh, and verifies config isolation.

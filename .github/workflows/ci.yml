@@ -23,11 +23,11 @@ jobs:
             target: bun-darwin-x64
             archive: x86_64-apple-darwin
           - runner: ubuntu-24.04-arm
-            target: bun-linux-arm64-musl
-            archive: aarch64-unknown-linux-musl
+            target: bun-linux-arm64
+            archive: aarch64-unknown-linux-gnu
           - runner: ubuntu-24.04
-            target: bun-linux-x64-musl
-            archive: x86_64-unknown-linux-musl
+            target: bun-linux-x64
+            archive: x86_64-unknown-linux-gnu
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     steps:
@@ -45,7 +45,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y zsh
       - run: npm test
       - name: Compile native executable
-        run: bun --no-env-file scripts/build.js --target '${{ matrix.target }}'
+        run: |
+          bun --no-env-file scripts/build.js --target '${{ matrix.target }}'
+          file dist/promptly
       - name: Test isolated executable without a JS runtime
         run: npm run test:binary
       - name: Package executable and checksums

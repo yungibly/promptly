@@ -8,7 +8,7 @@ import packageInfo from '../package.json' with { type: 'json' };
 
 export const targets = [
   'aarch64-apple-darwin', 'x86_64-apple-darwin',
-  'aarch64-unknown-linux-musl', 'x86_64-unknown-linux-musl',
+  'aarch64-unknown-linux-gnu', 'x86_64-unknown-linux-gnu',
 ];
 export const version = packageInfo.version;
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -71,6 +71,8 @@ class Promptly < Formula
   version "${version}"
 
   on_macos do
+    depends_on macos: :ventura
+
     on_arm do
       ${asset('aarch64-apple-darwin')}
     end
@@ -81,10 +83,10 @@ class Promptly < Formula
 
   on_linux do
     on_arm do
-      ${asset('aarch64-unknown-linux-musl')}
+      ${asset('aarch64-unknown-linux-gnu')}
     end
     on_intel do
-      ${asset('x86_64-unknown-linux-musl')}
+      ${asset('x86_64-unknown-linux-gnu')}
     end
   end
 

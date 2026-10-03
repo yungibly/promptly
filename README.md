@@ -20,7 +20,8 @@ brew install yungibly/tap/promptly
 
 Or download the standalone binary for macOS or Linux (ARM64 or x86-64) from
 [Releases](https://github.com/yungibly/promptly/releases), extract it, and put
-`promptly` on your `PATH`. No Node, Bun, npm packages, or repository required.
+`promptly` on your `PATH`. macOS 13+ or Linux with glibc 2.17+ is required.
+No Node, Bun, npm packages, or repository required.
 Previews and generated prompts use zsh 5.8+.
 
 ## Generate
