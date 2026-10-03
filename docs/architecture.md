@@ -445,9 +445,11 @@ terminal scrollback; active input remains correct, as described above.
 
 ## Mixed exploration and compact prompt baseline
 
-`docs/possibilities.png` captures the default mixed gallery: `possibility`, six
-specimens, complexity 8, at 120 columns. `docs/prompts.png` focuses on the new
-compact engine with seed `closely`. Both are actual Ghostty-backend captures.
+The current `docs/possibilities.png` refreshes the mixed gallery with eight
+`possibility` specimens, complexity 8, at 120 columns. `docs/prompts.png` focuses
+on the compact engine with seed `closely`. Both are actual Ghostty-backend
+captures, regenerated with the current composer; the baseline below describes
+the original compact-engine release.
 `examples/compose.*` now stores a compact specimen (`closely/6`); the version-2
 network and version-3 assembly examples remain separate and unchanged.
 

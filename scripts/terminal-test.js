@@ -51,11 +51,11 @@ function eventually(predicate, message) {
 }
 
 try {
+  // npm injects EDITOR=vi. Choose emacs before startup so zsh configures its
+  // terminal keys in the map used by these Ctrl+E checks, only in this test shell.
   tui('open', '--shell', 'zsh', '--backend', 'ghostty', '--cols', '120', '--rows', '24',
-    '--cwd', root, '--env', `ZDOTDIR=${output}/zdot`, '--config', resolve('tui-test.toml'), '--no-wait-ready');
-  // npm injects EDITOR=vi, which makes zsh choose vi bindings. These editing
-  // checks intentionally use emacs Ctrl+E; set that keymap only in this test shell.
-  submit('bindkey -e; unset NO_COLOR; PROMPT="before> "; RPROMPT=""; clear');
+    '--cwd', root, '--env', `ZDOTDIR=${output}/zdot`, '--env', 'EDITOR=emacs', '--env', 'VISUAL=emacs', '--config', resolve('tui-test.toml'), '--no-wait-ready');
+  submit('unset NO_COLOR; PROMPT="before> "; RPROMPT=""; clear');
   const upgrade = createDesign({ version: 4, seed: 'upgrade', engine: 'prompt', info: false });
   writeFileSync(`${output}/legacy.zsh`, legacy(upgrade));
   writeFileSync(`${output}/upgrade.zsh`, compile(upgrade));

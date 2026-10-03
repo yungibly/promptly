@@ -15,7 +15,7 @@ color, and detail vary independently. No Git, clocks, network calls, or runtime 
 · [Horizontal capsules](docs/capsules-v6.png)
 · [Mixed possibilities](docs/possibilities.png)
 · [Role compositions](docs/surfaces.png)
-· [Earlier compact prompts](docs/prompts.png)
+· [Line-focused prompts](docs/prompts.png)
 · [Freeform compositions](docs/assembly.png)
 · [Connected networks](docs/primitives.png)
 · [Original classic layouts](docs/gallery.png)
