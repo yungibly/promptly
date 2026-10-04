@@ -13,7 +13,7 @@ for (const [chars, replacement] of [
   ['╱', '/'], ['╲', '\\'], ['╳', 'X'],
   ['·∙⋅•∘°˙', '.'], ['⋮⁝', ':'], ['⋰', '/'], ['⋱', '\\'],
   ['◇◆◈◊⟐⟡⬡⌬', '*'], ['○◌◎⊙⊚⊕⊗', 'o'],
-  ['△▲▵▴', '^'], ['▽▼▿▾', 'v'], ['▷▹▸❯»›', '>'], ['◁◃◂❮«‹', '<'],
+  ['△▲▵▴', '^'], ['▽▼▿▾', 'v'], ['▷▹▸▶❯»›', '>'], ['◁◃◂◀❮«‹', '<'],
   ['◖', '('], ['◗', ')'], ['▌▐', '|'], ['▀▗▖▝▘', '#'],
   ['⟨〈⟪', '<'], ['⟩〉⟫', '>'], ['⟦⌈⌊', '['], ['⟧⌉⌋', ']'],
   ['≋≈∿', '~'], ['═≡', '='], ['ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ', 'x'],
@@ -22,7 +22,7 @@ for (const [chars, replacement] of [
 
 export const ascii = (text) => [...text].map((c) => c.codePointAt(0) < 127 ? c : fallback.get(c) ?? '*').join('');
 const glyphText = (text, mode) => mode === 'ascii' ? ascii(text) : mode === 'powerline'
-  ? text.replaceAll('◖', '\ue0b6').replaceAll('◗', '\ue0b4') : text;
+  ? text.replaceAll('◖', '\ue0b6').replaceAll('◗', '\ue0b4').replaceAll('◀', '\ue0b2').replaceAll('▶', '\ue0b0') : text;
 
 export class Scene {
   constructor(rows, glyphs = 'unicode') {

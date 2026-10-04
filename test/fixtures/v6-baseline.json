@@ -1,0 +1,1169 @@
+[
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/surface/1",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 3,
+      "glyphs": "ascii",
+      "label": "",
+      "info": true,
+      "material": "heavy",
+      "alphabet": "punctuation",
+      "symmetry": "none",
+      "height": 3,
+      "density": 0.393,
+      "ornamentSeed": "v6-frozen/surface/1",
+      "engine": "surface",
+      "spread": 0.643,
+      "fragments": 3,
+      "connectivity": 0,
+      "weight": 0.908,
+      "colorSeed": "v6-frozen/surface/1",
+      "colors": [
+        "#725b6a",
+        "#9f7083",
+        "#ff82dc",
+        "#fa908c",
+        "#ff93c1",
+        "#f9edf4",
+        "#321924"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 338.980927,
+        "hueSpread": 44.022773,
+        "balance": 0.340938,
+        "chroma": 0.159433,
+        "lightness": 0.797605,
+        "lightnessSpread": 0.065484,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.499495,
+            "chroma": 0.038264,
+            "hue": 338.980927,
+            "hex": "#725b6a"
+          },
+          {
+            "role": "line",
+            "lightness": 0.599249,
+            "chroma": 0.063773,
+            "hue": 353.989963,
+            "hex": "#9f7083"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.774419,
+            "chroma": 0.183859,
+            "hue": 338.980927,
+            "hex": "#ff82dc"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.765558,
+            "chroma": 0.128988,
+            "hue": 23.0037,
+            "hex": "#fa908c"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.790039,
+            "chroma": 0.139084,
+            "hue": 353.989963,
+            "hex": "#ff93c1"
+          },
+          {
+            "role": "text",
+            "lightness": 0.957477,
+            "chroma": 0.015943,
+            "hue": 338.980927,
+            "hex": "#f9edf4"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.253371,
+            "chroma": 0.042264,
+            "hue": 353.989963,
+            "hex": "#321924"
+          }
+        ]
+      }
+    },
+    "source": "fab933c969394abb97a356b82c7e85866694a5f41e319b4cab2081bd26ae1058",
+    "composition": "585eb32c9003f6f52b1439ebeedbbcaff92c3ba095d7b7f8f5ec92d7e7ff1202"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/surface/2",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 6,
+      "glyphs": "powerline",
+      "label": "",
+      "info": true,
+      "material": "dashed",
+      "alphabet": "technical",
+      "symmetry": "none",
+      "height": 2,
+      "density": 0.648,
+      "ornamentSeed": "v6-frozen/surface/2",
+      "engine": "surface",
+      "spread": 0.649,
+      "fragments": 3,
+      "connectivity": 0,
+      "weight": 0.166,
+      "colorSeed": "v6-frozen/surface/2",
+      "colors": [
+        "#707f6d",
+        "#6d896b",
+        "#98ca8e",
+        "#6ad175",
+        "#7cce79",
+        "#e2e9e1",
+        "#132312"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 140.503396,
+        "hueSpread": 5.646463,
+        "balance": 0.476874,
+        "chroma": 0.135682,
+        "lightness": 0.789074,
+        "lightnessSpread": 0.037155,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.578719,
+            "chroma": 0.032564,
+            "hue": 140.503396,
+            "hex": "#707f6d"
+          },
+          {
+            "role": "line",
+            "lightness": 0.600036,
+            "chroma": 0.054273,
+            "hue": 143.196047,
+            "hex": "#6d896b"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.787898,
+            "chroma": 0.097294,
+            "hue": 140.503396,
+            "hex": "#98ca8e"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.776572,
+            "chroma": 0.160156,
+            "hue": 146.149859,
+            "hex": "#6ad175"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.777488,
+            "chroma": 0.142743,
+            "hue": 143.196047,
+            "hex": "#7cce79"
+          },
+          {
+            "role": "text",
+            "lightness": 0.927513,
+            "chroma": 0.013568,
+            "hue": 140.503396,
+            "hex": "#e2e9e1"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.234918,
+            "chroma": 0.036564,
+            "hue": 143.196047,
+            "hex": "#132312"
+          }
+        ]
+      }
+    },
+    "source": "a6a26d79e730f18a81b7d82131bad734288533f6f46b204291907a3d7aa3e0b5",
+    "composition": "05405a12426cee28bcbcd9e9eb627ceef3d0c6cdb0c25fcb71ea48a16c809cf2"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/surface/3",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 9,
+      "glyphs": "unicode",
+      "label": "",
+      "info": true,
+      "material": "square",
+      "alphabet": "punctuation",
+      "symmetry": "mirror",
+      "height": 2,
+      "density": 0.642,
+      "ornamentSeed": "v6-frozen/surface/3",
+      "engine": "surface",
+      "spread": 0.641,
+      "fragments": 2,
+      "connectivity": 0,
+      "weight": 0.54,
+      "colorSeed": "v6-frozen/surface/3",
+      "colors": [
+        "#777675",
+        "#858483",
+        "#969590",
+        "#8d8e8a",
+        "#a2a09c",
+        "#e6e6e6",
+        "#1a1916"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 96.755455,
+        "hueSpread": 23.104431,
+        "balance": -0.343353,
+        "chroma": 0.006334,
+        "lightness": 0.675001,
+        "lightnessSpread": 0.121723,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.566914,
+            "chroma": 0.00152,
+            "hue": 96.755455,
+            "hex": "#777675"
+          },
+          {
+            "role": "line",
+            "lightness": 0.615063,
+            "chroma": 0.002534,
+            "hue": 88.822479,
+            "hex": "#858483"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.668584,
+            "chroma": 0.006607,
+            "hue": 96.755455,
+            "hex": "#969590"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.645464,
+            "chroma": 0.006465,
+            "hue": 119.859886,
+            "hex": "#8d8e8a"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.707059,
+            "chroma": 0.006948,
+            "hue": 88.822479,
+            "hex": "#a2a09c"
+          },
+          {
+            "role": "text",
+            "lightness": 0.925054,
+            "chroma": 0.000633,
+            "hue": 96.755455,
+            "hex": "#e6e6e6"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.213178,
+            "chroma": 0.00552,
+            "hue": 88.822479,
+            "hex": "#1a1916"
+          }
+        ]
+      }
+    },
+    "source": "4ecd4da72dcfded43c3a586b3d79eaaef40de01698c1c01576e509f264d7be3c",
+    "composition": "1e88cf5d770f8df533a937e48c99999a49c000bb16810012ae08feefb6ffc65d"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/prompt/1",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 3,
+      "glyphs": "ascii",
+      "label": "",
+      "info": true,
+      "material": "heavy",
+      "alphabet": "geometric",
+      "symmetry": "none",
+      "height": 1,
+      "density": 0.48,
+      "ornamentSeed": "v6-frozen/prompt/1",
+      "engine": "prompt",
+      "spread": 0.246,
+      "fragments": 1,
+      "connectivity": 0.512,
+      "weight": 0.614,
+      "colorSeed": "v6-frozen/prompt/1",
+      "colors": [
+        "#6a6c5c",
+        "#7c937e",
+        "#a6ab74",
+        "#51b8c9",
+        "#72bf7e",
+        "#e3e4dd",
+        "#18261a"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 112.218827,
+        "hueSpread": 97.071363,
+        "balance": 0.36806,
+        "chroma": 0.102651,
+        "lightness": 0.73575,
+        "lightnessSpread": 0.032523,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.52466,
+            "chroma": 0.024636,
+            "hue": 112.218827,
+            "hex": "#6a6c5c"
+          },
+          {
+            "role": "line",
+            "lightness": 0.640168,
+            "chroma": 0.04106,
+            "hue": 147.946913,
+            "hex": "#7c937e"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.723061,
+            "chroma": 0.073899,
+            "hue": 112.218827,
+            "hex": "#a6ab74"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.729513,
+            "chroma": 0.097168,
+            "hue": 209.29019,
+            "hex": "#51b8c9"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.736903,
+            "chroma": 0.121056,
+            "hue": 147.946913,
+            "hex": "#72bf7e"
+          },
+          {
+            "role": "text",
+            "lightness": 0.91698,
+            "chroma": 0.010265,
+            "hue": 112.218827,
+            "hex": "#e3e4dd"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.251458,
+            "chroma": 0.028636,
+            "hue": 147.946913,
+            "hex": "#18261a"
+          }
+        ]
+      }
+    },
+    "source": "ec8cef43752b98016f40020865c57876ab54870fe243df297f99aadad7be0bbe",
+    "composition": "82cb7d4da471e3aa9c0ad13508a8104bdb45f7f3c2d8cd19063e541d3c1661b6"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/prompt/2",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 6,
+      "glyphs": "powerline",
+      "label": "",
+      "info": true,
+      "material": "heavy",
+      "alphabet": "technical",
+      "symmetry": "none",
+      "height": 2,
+      "density": 0.415,
+      "ornamentSeed": "v6-frozen/prompt/2",
+      "engine": "prompt",
+      "spread": 0.915,
+      "fragments": 4,
+      "connectivity": 0,
+      "weight": 0.197,
+      "colorSeed": "v6-frozen/prompt/2",
+      "colors": [
+        "#537667",
+        "#528a68",
+        "#2ff1b5",
+        "#ff837b",
+        "#00dc84",
+        "#dbebe4",
+        "#0c2d1b"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 165.765473,
+        "hueSpread": 219.481077,
+        "balance": -0.0431,
+        "chroma": 0.198097,
+        "lightness": 0.805364,
+        "lightnessSpread": 0.126178,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.53462,
+            "chroma": 0.047543,
+            "hue": 165.765473,
+            "hex": "#537667"
+          },
+          {
+            "role": "line",
+            "lightness": 0.585667,
+            "chroma": 0.079239,
+            "hue": 156.305839,
+            "hex": "#528a68"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.853438,
+            "chroma": 0.169219,
+            "hue": 165.765473,
+            "hex": "#2ff1b5"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.748498,
+            "chroma": 0.151701,
+            "hue": 25.24655,
+            "hex": "#ff837b"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.785572,
+            "chroma": 0.18944,
+            "hue": 156.305839,
+            "hex": "#00dc84"
+          },
+          {
+            "role": "text",
+            "lightness": 0.926841,
+            "chroma": 0.01981,
+            "hue": 165.765473,
+            "hex": "#dbebe4"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.268618,
+            "chroma": 0.051543,
+            "hue": 156.305839,
+            "hex": "#0c2d1b"
+          }
+        ]
+      }
+    },
+    "source": "9050db303d44f34692e17fa436b7614a017983063464d9adbb85ebe907ad556b",
+    "composition": "45792216a5f5941174fe42fbafe619818c076b77cc379c5e59b00daa3697c746"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/prompt/3",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 9,
+      "glyphs": "unicode",
+      "label": "",
+      "info": true,
+      "material": "double",
+      "alphabet": "punctuation",
+      "symmetry": "none",
+      "height": 1,
+      "density": 0.578,
+      "ornamentSeed": "v6-frozen/prompt/3",
+      "engine": "prompt",
+      "spread": 0.63,
+      "fragments": 4,
+      "connectivity": 0,
+      "weight": 0.804,
+      "colorSeed": "v6-frozen/prompt/3",
+      "colors": [
+        "#79757e",
+        "#918998",
+        "#c5b8d5",
+        "#ce9db2",
+        "#b9aac8",
+        "#e0dee3",
+        "#2c2731"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 306.391726,
+        "hueSpread": 44.880211,
+        "balance": 0.038571,
+        "chroma": 0.060671,
+        "lightness": 0.781965,
+        "lightnessSpread": 0.105377,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.570127,
+            "chroma": 0.014561,
+            "hue": 306.391726,
+            "hex": "#79757e"
+          },
+          {
+            "role": "line",
+            "lightness": 0.641698,
+            "chroma": 0.024268,
+            "hue": 308.122801,
+            "hex": "#918998"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.802772,
+            "chroma": 0.042999,
+            "hue": 306.391726,
+            "hex": "#c5b8d5"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.74801,
+            "chroma": 0.064234,
+            "hue": 351.271937,
+            "hex": "#ce9db2"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.761029,
+            "chroma": 0.045692,
+            "hue": 308.122801,
+            "hex": "#b9aac8"
+          },
+          {
+            "role": "text",
+            "lightness": 0.904815,
+            "chroma": 0.006067,
+            "hue": 306.391726,
+            "hex": "#e0dee3"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.282272,
+            "chroma": 0.018561,
+            "hue": 308.122801,
+            "hex": "#2c2731"
+          }
+        ]
+      }
+    },
+    "source": "72a5826644c7c038d2c2f7361d0aa31c84c6630b7be6e976e9dcf27c25cd6f19",
+    "composition": "3d6f7ba306a2f236e3c549f957f1ded04cab9f53a5743e704dcaf2dd2ff357c5"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/assembly/1",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 3,
+      "glyphs": "ascii",
+      "label": "",
+      "info": true,
+      "material": "double",
+      "alphabet": "geometric",
+      "symmetry": "none",
+      "height": 12,
+      "density": 0.378,
+      "ornamentSeed": "v6-frozen/assembly/1",
+      "engine": "assembly",
+      "spread": 0.212,
+      "fragments": 12,
+      "connectivity": 0,
+      "weight": 0.664,
+      "colorSeed": "v6-frozen/assembly/1",
+      "colors": [
+        "#836b65",
+        "#9b736a",
+        "#dc7963",
+        "#cc8456",
+        "#d47d6a",
+        "#f1e5e3",
+        "#2c1713"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 34.021649,
+        "hueSpread": 18.036374,
+        "balance": -0.029102,
+        "chroma": 0.130779,
+        "lightness": 0.680499,
+        "lightnessSpread": 0.026257,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.549075,
+            "chroma": 0.031387,
+            "hue": 34.021649,
+            "hex": "#836b65"
+          },
+          {
+            "role": "line",
+            "lightness": 0.592433,
+            "chroma": 0.052312,
+            "hue": 33.496754,
+            "hex": "#9b736a"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.682208,
+            "chroma": 0.128101,
+            "hue": 34.021649,
+            "hex": "#dc7963"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.678342,
+            "chroma": 0.108449,
+            "hue": 52.058023,
+            "hex": "#cc8456"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.679818,
+            "chroma": 0.11303,
+            "hue": 33.496754,
+            "hex": "#d47d6a"
+          },
+          {
+            "role": "text",
+            "lightness": 0.931537,
+            "chroma": 0.013078,
+            "hue": 34.021649,
+            "hex": "#f1e5e3"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.233361,
+            "chroma": 0.035387,
+            "hue": 33.496754,
+            "hex": "#2c1713"
+          }
+        ]
+      }
+    },
+    "source": "f5f1092579c2444489de142520bf3853ab785c03ea02e7e7010fb687737b9e2e",
+    "composition": "6b5108f652192d3f87c4521fc688e53823a835e0d87bc81f5b2a1d63f56b4ffb"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/assembly/2",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 6,
+      "glyphs": "powerline",
+      "label": "",
+      "info": true,
+      "material": "dashed",
+      "alphabet": "granular",
+      "symmetry": "none",
+      "height": 4,
+      "density": 0.499,
+      "ornamentSeed": "v6-frozen/assembly/2",
+      "engine": "assembly",
+      "spread": 0.839,
+      "fragments": 1,
+      "connectivity": 0.215,
+      "weight": 0.202,
+      "colorSeed": "v6-frozen/assembly/2",
+      "colors": [
+        "#767379",
+        "#908993",
+        "#b0a0bd",
+        "#bea6b3",
+        "#bbacc1",
+        "#ebe9ec",
+        "#2b272e"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 309.555003,
+        "hueSpread": 35.306672,
+        "balance": 0.160396,
+        "chroma": 0.041395,
+        "lightness": 0.780302,
+        "lightnessSpread": 0.102783,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.559893,
+            "chroma": 0.009935,
+            "hue": 309.555003,
+            "hex": "#767379"
+          },
+          {
+            "role": "line",
+            "lightness": 0.639149,
+            "chroma": 0.016558,
+            "hue": 315.218052,
+            "hex": "#908993"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.729583,
+            "chroma": 0.044362,
+            "hue": 309.555003,
+            "hex": "#b0a0bd"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.749183,
+            "chroma": 0.033751,
+            "hue": 344.861675,
+            "hex": "#bea6b3"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.763366,
+            "chroma": 0.033977,
+            "hue": 315.218052,
+            "hex": "#bbacc1"
+          },
+          {
+            "role": "text",
+            "lightness": 0.937388,
+            "chroma": 0.00414,
+            "hue": 309.555003,
+            "hex": "#ebe9ec"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.279716,
+            "chroma": 0.013935,
+            "hue": 315.218052,
+            "hex": "#2b272e"
+          }
+        ]
+      }
+    },
+    "source": "854171b2f067204da52dcf12c0c8d7e47b8a1be2c17e402866fef8bc65252426",
+    "composition": "3e56e96ef45ccbced6f1c7a1d6f65090218ed2332dacfe15612417c0b4ad8dbf"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/assembly/3",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 9,
+      "glyphs": "unicode",
+      "label": "",
+      "info": true,
+      "material": "heavy",
+      "alphabet": "granular",
+      "symmetry": "none",
+      "height": 3,
+      "density": 0.58,
+      "ornamentSeed": "v6-frozen/assembly/3",
+      "engine": "assembly",
+      "spread": 0.454,
+      "fragments": 4,
+      "connectivity": 0,
+      "weight": 0.149,
+      "colorSeed": "v6-frozen/assembly/3",
+      "colors": [
+        "#735a6e",
+        "#9f749a",
+        "#fd74ea",
+        "#f858bf",
+        "#fc85f3",
+        "#f3e7f1",
+        "#1e091c"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 332.92453,
+        "hueSpread": 11.71275,
+        "balance": -0.244977,
+        "chroma": 0.189634,
+        "lightness": 0.744134,
+        "lightnessSpread": 0.090308,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.49981,
+            "chroma": 0.045512,
+            "hue": 332.92453,
+            "hex": "#735a6e"
+          },
+          {
+            "role": "line",
+            "lightness": 0.61344,
+            "chroma": 0.075854,
+            "hue": 330.055176,
+            "hex": "#9f749a"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.759598,
+            "chroma": 0.213974,
+            "hue": 332.92453,
+            "hex": "#fd74ea"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.703087,
+            "chroma": 0.220817,
+            "hue": 344.63728,
+            "hex": "#f858bf"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.785162,
+            "chroma": 0.194051,
+            "hue": 330.055176,
+            "hex": "#fc85f3"
+          },
+          {
+            "role": "text",
+            "lightness": 0.940037,
+            "chroma": 0.018963,
+            "hue": 332.92453,
+            "hex": "#f3e7f1"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.181967,
+            "chroma": 0.049512,
+            "hue": 330.055176,
+            "hex": "#1e091c"
+          }
+        ]
+      }
+    },
+    "source": "20ad97ee2741cef62af9196c98db3c41771d659a905fa14422b7c5d8c1e2a13c",
+    "composition": "ad5878d00de085eaa799784ef27eb8d578ad3969c2a60b9b49311a4a36487fd0"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/network/1",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 3,
+      "glyphs": "ascii",
+      "label": "",
+      "info": true,
+      "material": "heavy",
+      "alphabet": "punctuation",
+      "symmetry": "none",
+      "height": 8,
+      "density": 0.394,
+      "ornamentSeed": "v6-frozen/network/1",
+      "engine": "network",
+      "weight": 0.592,
+      "colorSeed": "v6-frozen/network/1",
+      "colors": [
+        "#5e686c",
+        "#7c8894",
+        "#93b9c7",
+        "#e7c3c0",
+        "#8eb0d3",
+        "#e5eaec",
+        "#11181f"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 223.230195,
+        "hueSpread": 160.525067,
+        "balance": 0.157861,
+        "chroma": 0.056745,
+        "lightness": 0.803862,
+        "lightnessSpread": 0.120695,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.510724,
+            "chroma": 0.013619,
+            "hue": 223.230195,
+            "hex": "#5e686c"
+          },
+          {
+            "role": "line",
+            "lightness": 0.620041,
+            "chroma": 0.022698,
+            "hue": 248.570843,
+            "hex": "#7c8894"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.762326,
+            "chroma": 0.045042,
+            "hue": 223.230195,
+            "hex": "#93b9c7"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.847729,
+            "chroma": 0.041206,
+            "hue": 23.755262,
+            "hex": "#e7c3c0"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.744927,
+            "chroma": 0.062778,
+            "hue": 248.570843,
+            "hex": "#8eb0d3"
+          },
+          {
+            "role": "text",
+            "lightness": 0.933226,
+            "chroma": 0.005675,
+            "hue": 223.230195,
+            "hex": "#e5eaec"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.205812,
+            "chroma": 0.017619,
+            "hue": 248.570843,
+            "hex": "#11181f"
+          }
+        ]
+      }
+    },
+    "source": "0ba8c0336df6e72d75e2afbe66b30804e4fa0b9468e4e2d445b1b651da7dacf0",
+    "composition": "c132f01e43dfbc35197cedcae167e4b637d480c268e23450ce3ca3cb7bb8ba98"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/network/2",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 6,
+      "glyphs": "powerline",
+      "label": "",
+      "info": true,
+      "material": "square",
+      "alphabet": "technical",
+      "symmetry": "none",
+      "height": 8,
+      "density": 0.336,
+      "ornamentSeed": "v6-frozen/network/2",
+      "engine": "network",
+      "weight": 0.182,
+      "colorSeed": "v6-frozen/network/2",
+      "colors": [
+        "#6c6f66",
+        "#918f7f",
+        "#a1ab88",
+        "#96a1cd",
+        "#a5a182",
+        "#f0f1ed",
+        "#222117"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 120.740658,
+        "hueSpread": 153.120315,
+        "balance": -0.126104,
+        "chroma": 0.056474,
+        "lightness": 0.750958,
+        "lightnessSpread": 0.115412,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.536891,
+            "chroma": 0.013554,
+            "hue": 120.740658,
+            "hex": "#6c6f66"
+          },
+          {
+            "role": "line",
+            "lightness": 0.646155,
+            "chroma": 0.02259,
+            "hue": 101.431574,
+            "hex": "#918f7f"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.724401,
+            "chroma": 0.049826,
+            "hue": 120.740658,
+            "hex": "#a1ab88"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.715344,
+            "chroma": 0.066518,
+            "hue": 273.860973,
+            "hex": "#96a1cd"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.703898,
+            "chroma": 0.04415,
+            "hue": 101.431574,
+            "hex": "#a5a182"
+          },
+          {
+            "role": "text",
+            "lightness": 0.95639,
+            "chroma": 0.005647,
+            "hue": 120.740658,
+            "hex": "#f0f1ed"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.245504,
+            "chroma": 0.017554,
+            "hue": 101.431574,
+            "hex": "#222117"
+          }
+        ]
+      }
+    },
+    "source": "1b951b7c5167f2b4a63602701160d291666ee1596df40f5a6f57e541291ad690",
+    "composition": "795ed3bb7ab38f10bb202ad07f7dd235e0a0258088b4797fba76bcae4761abdb"
+  },
+  {
+    "recipe": {
+      "version": 6,
+      "seed": "v6-frozen/network/3",
+      "style": "compose",
+      "palette": "generated",
+      "complexity": 9,
+      "glyphs": "unicode",
+      "label": "",
+      "info": true,
+      "material": "square",
+      "alphabet": "technical",
+      "symmetry": "none",
+      "height": 4,
+      "density": 0.611,
+      "ornamentSeed": "v6-frozen/network/3",
+      "engine": "network",
+      "weight": 0.417,
+      "colorSeed": "v6-frozen/network/3",
+      "colors": [
+        "#5c6b61",
+        "#7a998d",
+        "#6a9f7e",
+        "#c7739c",
+        "#47a184",
+        "#e5ece7",
+        "#051610"
+      ],
+      "colorProgram": {
+        "generator": "chromatic-relationships/1",
+        "space": "oklch",
+        "baseHue": 156.239461,
+        "hueSpread": 193.962241,
+        "balance": 0.06719,
+        "chroma": 0.099106,
+        "lightness": 0.654191,
+        "lightnessSpread": 0.077437,
+        "referenceBackground": "#242733",
+        "surfaceIndex": 6,
+        "roles": [
+          {
+            "role": "quiet",
+            "lightness": 0.511855,
+            "chroma": 0.023785,
+            "hue": 156.239461,
+            "hex": "#5c6b61"
+          },
+          {
+            "role": "line",
+            "lightness": 0.655928,
+            "chroma": 0.039642,
+            "hue": 169.271784,
+            "hex": "#7a998d"
+          },
+          {
+            "role": "accent1",
+            "lightness": 0.656637,
+            "chroma": 0.075266,
+            "hue": 156.239461,
+            "hex": "#6a9f7e"
+          },
+          {
+            "role": "accent2",
+            "lightness": 0.659952,
+            "chroma": 0.116908,
+            "hue": 350.201702,
+            "hex": "#c7739c"
+          },
+          {
+            "role": "accent3",
+            "lightness": 0.646657,
+            "chroma": 0.097373,
+            "hue": 169.271784,
+            "hex": "#47a184"
+          },
+          {
+            "role": "text",
+            "lightness": 0.935362,
+            "chroma": 0.009911,
+            "hue": 156.239461,
+            "hex": "#e5ece7"
+          },
+          {
+            "role": "surface",
+            "lightness": 0.184129,
+            "chroma": 0.027785,
+            "hue": 169.271784,
+            "hex": "#051610"
+          }
+        ]
+      }
+    },
+    "source": "137b6c5ac4c8c8648f6f5ace73fabcd00756b48dff8146bc2773002a872838c2",
+    "composition": "bdea9834ab61aa74bf81a79860850f3a6aa05f3f57914efc7d3dcbc1eeb5cf9e"
+  }
+]

@@ -87,9 +87,9 @@ test('composition controls are validated before planning geometry', () => {
 });
 
 test('surface overrides and detail mutations leave topology exactly unchanged', () => {
-  const original = createDesign({ seed: 'independent', complexity: 7 });
+  const original = createDesign({ seed: 'independent', engine: 'network', complexity: 7 });
   for (const override of [{ material: 'heavy' }, { alphabet: 'punctuation' }, { palette: 'abyss' }]) {
-    const design = createDesign({ seed: original.seed, complexity: 7, ...override });
+    const design = createDesign({ seed: original.seed, engine: 'network', complexity: 7, ...override });
     assert.deepEqual(design.program.derivation, original.program.derivation);
     assert.equal(design.height, original.height);
     assert.equal(design.symmetry, original.symmetry);

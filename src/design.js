@@ -11,7 +11,8 @@ export function createDesign(options = {}) {
   const seed = String(options.seed ?? randomSeed());
   if (!seed.length || seed.length > 256) throw new Error('Seed must contain 1–256 characters.');
   const style = options.style ?? 'compose';
-  const modern = style === 'compose' && (options.version === undefined || options.version === 6);
+  const modern = style === 'compose' && (options.version === undefined || options.version === 6 || options.version === 7);
+  const evolved = modern && (options.version === undefined || options.version === 7);
   const palette = options.palette ?? (options.version === undefined || modern ? 'generated' : random(seed, 'palette').pick(Object.keys(palettes)));
   // One roll explores the whole detail range without moving the independent
   // engine, footprint, weight, or color streams. Recipes store the resolved roll.
@@ -89,13 +90,24 @@ export function createDesign(options = {}) {
   } else if (['engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed', 'spread', 'fragments', 'connectivity', 'weight'].some((key) => options[key] !== undefined)) {
     throw new Error('Composition controls and scoped mutations require style compose.');
   }
-  const context = { ...config, colors, modern, info, label: config.engine === 'surface' || modern && config.engine === 'prompt' ? label : label || 'username', rng: random(seed, `structure:${style}`), ornament: random(config.ornamentSeed ?? seed, `ornament:${style}`) };
+  if (evolved) {
+    for (const key of ['artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed']) {
+      const value = options[key] === undefined ? seed : options[key];
+      if (typeof value !== 'string' || !value.length || value.length > 512) throw new Error(`${key} must contain 1–512 characters.`);
+      config[key] = value;
+    }
+    const fragments = options.fragmentSeeds === undefined ? {} : options.fragmentSeeds;
+    if (!fragments || typeof fragments !== 'object' || Array.isArray(fragments) || Object.keys(fragments).length > 24 || Object.entries(fragments).some(([key, value]) => !/^piece:(?:[0-9]|1[0-9]|2[0-3])$/.test(key) || typeof value !== 'string' || !value.length || value.length > 512)) throw new Error('Fragment seeds require up to 24 piece:N entries with 1–512 character seeds.');
+    if (config.engine !== 'assembly' && Object.keys(fragments).length) throw new Error('Fragment seeds require engine assembly.');
+    config.fragmentSeeds = { ...fragments };
+  } else if (['artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed', 'fragmentSeeds'].some((key) => options[key] !== undefined)) throw new Error('Component seeds require a version 7 composition.');
+  const context = { ...config, colors, modern, evolved, info, label: config.engine === 'surface' || modern && config.engine === 'prompt' ? label : label || 'username', rng: random(config.artSeed ?? seed, `structure:${style}`), ornament: random(config.ornamentSeed ?? seed, `ornament:${style}`) };
   let composition = grammars[style].build(context);
-  if (modern && info && ['assembly', 'network'].includes(config.engine)) composition = withRoleBand(composition, { ...config, colors });
+  if (modern && info && ['assembly', 'network'].includes(config.engine)) composition = withRoleBand(composition, { ...config, colors, evolved });
   else if (info && config.engine !== 'surface' && !(modern && config.engine === 'prompt')) composition = withIdentity(composition, config);
   if (glyphs === 'ascii') composition.rightPrompt = ascii(composition.rightPrompt);
   return {
-    version: modern ? 6 : style === 'compose' ? ({ network: 2, assembly: 3, prompt: 4, surface: 5 }[config.engine]) : 1,
+    version: evolved ? 7 : modern ? 6 : style === 'compose' ? ({ network: 2, assembly: 3, prompt: 4, surface: 5 }[config.engine]) : 1,
     ...config,
     colors,
     ...composition,
@@ -110,14 +122,20 @@ export function recipe(design) {
   if (version >= 2) for (const key of ['material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed']) value[key] = design[key];
   if (version >= 3) for (const key of ['engine', 'spread', 'fragments', 'connectivity']) if (design[key] !== undefined) value[key] = design[key];
   if (version >= 6) value.weight = design.weight;
+  if (version >= 7) {
+    for (const key of ['artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed']) value[key] = design[key];
+    value.fragmentSeeds = design.engine === 'assembly'
+      ? Object.fromEntries(design.program.derivation.pieces.map((piece) => [piece.fragmentId, piece.seed]))
+      : {};
+  }
   if (palette === 'generated') for (const key of ['colorSeed', 'colors', 'colorProgram']) value[key] = design[key];
   return value;
 }
 
 export function fromRecipe(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || ![1, 2, 3, 4, 5, 6].includes(value.version)) throw new Error('Expected a Promptly recipe with version 1, 2, 3, 4, 5, or 6.');
-  if ((value.style === 'compose') !== (value.version >= 2)) throw new Error('Composed recipes require version 2–6; classic recipes require version 1.');
-  if (value.version === 6 && !['surface', 'prompt', 'assembly', 'network'].includes(value.engine)) throw new Error('Version 6 recipes require a resolved composition engine.');
+  if (!value || typeof value !== 'object' || Array.isArray(value) || ![1, 2, 3, 4, 5, 6, 7].includes(value.version)) throw new Error('Expected a Promptly recipe with version 1, 2, 3, 4, 5, 6, or 7.');
+  if ((value.style === 'compose') !== (value.version >= 2)) throw new Error('Composed recipes require version 2–7; classic recipes require version 1.');
+  if (value.version >= 6 && !['surface', 'prompt', 'assembly', 'network'].includes(value.engine)) throw new Error(`Version ${value.version} recipes require a resolved composition engine.`);
   if (value.version === 5 && value.engine !== 'surface') throw new Error('Version 5 recipes require engine surface.');
   if (value.version === 4 && value.engine !== 'prompt') throw new Error('Version 4 recipes require engine prompt.');
   if (value.version === 3 && value.engine !== 'assembly') throw new Error('Version 3 recipes require engine assembly.');
@@ -126,9 +144,20 @@ export function fromRecipe(value) {
   if (value.version >= 2) keys.push('material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed');
   if (value.version >= 3) keys.push('engine');
   if (value.version >= 3 && value.engine !== 'network') keys.push('spread', 'fragments', 'connectivity');
+  if (value.version >= 5 && !Object.hasOwn(value, 'info')) throw new Error('Recipe is incomplete: info is required from version 5.');
   if (value.version >= 6) keys.push('weight');
+  if (value.version >= 7) keys.push('artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed', 'fragmentSeeds');
   if (value.palette === 'generated') keys.push('colorSeed', 'colors', 'colorProgram');
   if (keys.some((key) => !Object.hasOwn(value, key))) throw new Error('Recipe is incomplete.');
+  const numeric = new Set(['version', 'complexity', 'height', 'density', 'spread', 'fragments', 'connectivity', 'weight']);
+  const structured = new Set(['colors', 'colorProgram', 'fragmentSeeds']);
+  for (const key of keys) {
+    if (numeric.has(key)) {
+      if (typeof value[key] !== 'number' || !Number.isFinite(value[key])) throw new Error(`${key[0].toUpperCase() + key.slice(1)} in recipe must be a finite number.`);
+    } else if (!structured.has(key) && typeof value[key] !== 'string') throw new Error(`Recipe ${key} must be a string.`);
+  }
+  if (Object.hasOwn(value, 'info') && typeof value.info !== 'boolean') throw new Error('Info must be a boolean.');
+  if (value.palette === 'generated' && (!value.colorProgram || typeof value.colorProgram !== 'object' || Array.isArray(value.colorProgram))) throw new Error('Recipe colorProgram must be an object.');
   return createDesign(value);
 }
 
@@ -137,6 +166,10 @@ export function mutateDesign(design, variation = '1', scope = 'all') {
   if (design.style !== 'compose' && scope !== 'all') throw new Error('Scoped mutations require style compose.');
   const options = recipe(design);
   if (scope !== 'ornament') options.seed = `${design.seed}/${variation}`;
+  if (design.version >= 7 && scope !== 'ornament') {
+    for (const key of ['artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed']) options[key] = `${design[key]}/${variation}`;
+    options.fragmentSeeds = {};
+  }
   if (design.style === 'compose' && scope !== 'structure') options.ornamentSeed = `${design.ornamentSeed}/${variation}`;
   return createDesign(options);
 }

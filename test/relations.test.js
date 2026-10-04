@@ -123,7 +123,7 @@ test('group count, links, detail, and line material controls retain their distin
 });
 
 test('version6 retains exact relation derivation across material and ornament changes', () => {
-  const design = createDesign({ engine: 'surface', seed: 'relation-contract', height: 3, weight: 0.8, complexity: 9 });
+  const design = createDesign({ version: 6, engine: 'surface', seed: 'relation-contract', height: 3, weight: 0.8, complexity: 9 });
   assert.equal(design.version, 6);
   assert.equal(design.program.engine, 'role-relations/1');
   assert.equal(compile(design), compile(fromRecipe(recipe(design))));

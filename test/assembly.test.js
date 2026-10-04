@@ -79,10 +79,10 @@ test('mirrored assemblies reflect geometry while text remains independently read
   assert.deepEqual(design.program.rowMap, variant.program.rowMap);
 });
 
-test('maximum density, optional links, row compaction, and short assemblies use the real renderer', () => {
+test('legacy row compaction and maximum-density assemblies use the real renderer', () => {
   let links = 0;
   for (let i = 0; i < 12; i++) {
-    const design = createDesign({ engine: 'assembly', seed: `render/${i}`, height: i % 2 ? 12 : 2, spread: 1, fragments: 6, connectivity: 1, density: 0.85, complexity: 10 });
+    const design = createDesign({ version: 6, engine: 'assembly', seed: `render/${i}`, height: i % 2 ? 12 : 2, spread: 1, fragments: 6, connectivity: 1, density: 0.85, complexity: 10 });
     links += design.program.stats.links;
     const portable = createDesign({ ...recipe(design), glyphs: 'ascii' });
     for (const width of [80, 81, 160]) {
@@ -107,7 +107,7 @@ test('galleries select deterministic geometric variety independently of palette 
   assert.deepEqual(gallery(options, 6).map((d) => d.seed), seeds);
   assert.deepEqual(gallery({ ...options, palette: 'ember', glyphs: 'ascii' }, 6).map((d) => d.seed), seeds);
   assert.ok(designs.some((d) => d.scene.rows <= 3) && designs.some((d) => d.scene.rows >= 7));
-  assert.ok(designs.some((d) => !d.program.stats.operations.stroke));
+  assert.ok(new Set(designs.map((d) => JSON.stringify(signature(d)))).size === designs.length);
 });
 
 test('version-2 network recipes keep the pre-assembly geometry and derivation', () => {

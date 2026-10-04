@@ -82,7 +82,16 @@ export function compile(design) {
     if (previous?.index === index) previous.end = width;
     else variants.push({ end: width, index });
   }
-  const selection = variants.map(({ end, index }, i) => i === variants.length - 1 ? `${index + 1}` : `_promptly_w<=${end}?${index + 1}:`).join('');
+  // Width-relative occlusion can create many transitions. A balanced arithmetic
+  // decision tree avoids zsh's recursion limit while preserving native expansion.
+  // Older recipes retain their exact exported source.
+  const choose = (lo, hi) => {
+    if (lo === hi) return String(variants[lo].index + 1);
+    const mid = Math.floor((lo + hi) / 2);
+    return `(_promptly_w<=${variants[mid].end}?${choose(lo, mid)}:${choose(mid + 1, hi)})`;
+  };
+  const selection = design.version >= 7 ? choose(0, variants.length - 1)
+    : variants.map(({ end, index }, i) => i === variants.length - 1 ? `${index + 1}` : `_promptly_w<=${end}?${index + 1}:`).join('');
   // Width-specific junction changes often affect just one row. Share the other
   // rows only when doing so actually makes the export smaller.
   const counts = new Map();

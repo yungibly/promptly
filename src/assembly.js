@@ -1,6 +1,8 @@
 import { Scene, anchor, left } from './scene.js';
 import { group, move, stroke, rasterize, programStats } from './marks.js';
 import { materials, alphabets, expression, renderExpression } from './ornaments.js';
+import { random } from './random.js';
+import { deriveMotif, evolveMotif } from './motifs.js';
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const families = ['stroke', 'inscription', 'field', 'contour', 'wave', 'bars', 'raster'];
@@ -165,6 +167,7 @@ function decorate(cells, config, rng) {
 }
 
 export function assemble(config) {
+  if (config.evolved) return assembleEvolved(config);
   const { rng, ornament, height, fragments, spread, symmetry, complexity, connectivity } = config;
   const artHeight = height - 1;
   const width = clamp(Math.round(76 * spread), 12, 76);
@@ -253,6 +256,128 @@ export function assemble(config) {
       traits: { spread, fragments, connectivity, focus, weights, operators, material: config.material, alphabet: config.alphabet, symmetry, density: config.density },
       derivation: { zone, splits: plan.splits, pieces, links }, rowMap, annotations, input, right: rightPrompt ? right : null,
       stats: { ...programStats(combined), fragments: pieces.length, links: links.length, occupiedCells: occupied, span: width },
+    },
+  };
+}
+
+function evolvingSeries(shared, width, height, complexity, rng) {
+  const horizontal = width >= 6 || height < 3;
+  const maximum = Math.max(1, Math.min(4, horizontal ? Math.floor(width / 3) : height, 1 + Math.ceil(complexity / 3)));
+  const count = rng.int(1, maximum), step = Math.floor((horizontal ? width : height) / count);
+  const phase = rng.int(0, 3), children = [], generations = [];
+  for (let i = 0; i < count; i++) {
+    const child = evolveMotif(shared, { width: horizontal ? Math.max(1, step - (count > 1 ? 1 : 0)) : width,
+      height: horizontal ? height : 1, step: phase + i, ink: rng.pick([0, 1, 2, 3]) });
+    children.push(move(child.tree, horizontal ? i * step : 0, horizontal ? 0 : i * step));
+    generations.push(child.evolution);
+  }
+  return { tree: group(...children), generations };
+}
+
+// Arrangement and each logical fragment own separate streams. Replacing one
+// fragment seed cannot consume another fragment's geometry or detail choices.
+// Mirrored partners are one logical fragment and therefore remain a true pair.
+function assembleEvolved(config) {
+  const { height, fragments, spread, symmetry, complexity, connectivity } = config;
+  const layoutSeed = config.layoutSeed ?? config.seed;
+  const layout = random(layoutSeed, 'structure:assembly:layout');
+  const vocabulary = random(layoutSeed, 'structure:assembly:vocabulary');
+  const shared = deriveMotif(config.motifSeed ?? config.seed);
+  const artHeight = height - 1, width = clamp(Math.round(76 * spread), 12, 76);
+  const focus = layout.pick([0, 0, 0.5, 1, 1, layout.next()]);
+  const mirrored = symmetry === 'mirror';
+  const zone = { x: 1 + Math.round((76 - width) * (mirrored ? 0.5 : focus)), y: 0, width, height: artHeight };
+  const plan = partition({ ...zone, width: mirrored ? Math.floor((width - 2) / 2) : width }, mirrored ? Math.ceil(fragments / 2) : fragments, layout);
+  const weights = Object.fromEntries(families.map((name) => [name, vocabulary.chance(0.6) ? 0 : vocabulary.int(1, 5)]));
+  if (!Object.values(weights).some(Boolean)) weights[vocabulary.pick(families)] = 3;
+  const pieces = [], raster = [];
+  for (const [index, region] of plan.regions.entries()) {
+    const fragmentId = `piece:${index}`;
+    const seed = config.fragmentSeeds?.[fragmentId] ?? `${config.seed}/${fragmentId}`;
+    if (typeof seed !== 'string' || !seed.length || seed.length > 512) throw new Error('Fragment seed must contain 1–512 characters.');
+    const structure = random(seed, 'structure:assembly:fragment');
+    const w = layout.int(Math.max(2, Math.ceil(region.width * 0.55)), region.width);
+    const h = layout.int(Math.max(1, Math.ceil(region.height * 0.5)), region.height);
+    const rect = { x: region.x + layout.int(0, region.width - w), y: region.y + layout.int(0, region.height - h), width: w, height: h };
+    const useMotif = structure.chance(0.55);
+    const evolved = useMotif ? evolvingSeries(shared, w, h, complexity, structure) : null;
+    // Cuts and thinning may leave an intentional void. The reservation survives
+    // local rerolls even when no painted cells remain inside this fragment.
+    const tree = clipped(evolved?.tree ?? motif(w, h, 2 + complexity * 2, structure, weights, config.density), w, h);
+    const piece = { id: pieces.length, fragmentId, seed, rect, tree, source: useMotif ? 'motif' : 'recursive', ...(evolved ? { generations: evolved.generations } : {}) };
+    pieces.push(piece);
+    if (mirrored) pieces.push({ ...piece, id: pieces.length, mirrored: true,
+      rect: { ...rect, x: 2 * zone.x + zone.width - rect.x - w },
+      tree: { op: 'reflect', axis: 'x', at: (w - 1) / 2, child: tree } });
+  }
+  pieces.forEach((piece) => raster.push(rasterize(piece.tree)));
+  const scene = new Scene(height, config.glyphs), links = [];
+  for (let i = 0; i < pieces.length; i++) for (let j = i + 1; j < pieces.length; j++) {
+    const rng = random(layoutSeed, `structure:assembly:link:${i}:${j}`);
+    if (!rng.chance(connectivity)) continue;
+    const [a, b] = pieces[i].rect.x < pieces[j].rect.x ? [i, j] : [j, i];
+    const ar = pieces[a].rect, br = pieces[b].rect;
+    if (ar.x + ar.width >= br.x) continue;
+    const candidates = [];
+    for (let row = Math.max(ar.y, br.y); row < Math.min(ar.y + ar.height, br.y + br.height); row++) {
+      // Atomic attachment requires occupied facing rectangle edges. Text slots
+      // are reservations, not guaranteed painted endpoints, so cannot be ports.
+      // Drawing only the gap preserves every fragment's art and negative space
+      // when a neighboring fragment changes its available attachment ports.
+      const start = ar.width - 1, end = 0;
+      const ac = raster[a].get(`${start},${row - ar.y}`), bc = raster[b].get(`${end},${row - br.y}`);
+      if (!ac || !bc || ac.kind === 'text' || bc.kind === 'text') continue;
+      if (pieces.some(({ rect: r }, k) => k !== a && k !== b && row >= r.y && row < r.y + r.height && r.x < br.x + end && r.x + r.width > ar.x + start)) continue;
+      candidates.push({ row, a, b, start, end, ports: [
+        { fragmentId: pieces[a].fragmentId, side: 'right', x: start, y: row - ar.y },
+        { fragmentId: pieces[b].fragmentId, side: 'left', x: end, y: row - br.y },
+      ] });
+    }
+    if (!candidates.length) continue;
+    const link = rng.pick(candidates);
+    if (links.some((l) => l.row === link.row && l.a === a)) continue;
+    links.push(link);
+    scene.fill(link.row, fragmentAnchor(ar, link.start + 1), fragmentAnchor(br, link.end), materials[config.material][10], 0);
+  }
+  const annotations = [];
+  let occupied = 0;
+  for (const piece of pieces) {
+    const detail = decorate(raster[piece.id], config, random(`${config.ornamentSeed ?? config.seed}\0${piece.seed}`, 'ornament:assembly:fragment'));
+    annotations.push({ id: piece.id, fragmentId: piece.fragmentId, expressions: detail.annotations, tones: detail.tones });
+    occupied += detail.marks.size;
+    for (const cell of detail.marks.values()) {
+      scene.text(piece.rect.y + cell.y, fragmentAnchor(piece.rect, cell.x), cell.glyph, cell.ink);
+      scene.runs.at(-1).fragmentId = piece.fragmentId;
+    }
+  }
+  // Compact reservations, not the changing raster. Local rerolls preserve the
+  // displayed position of every pinned fragment and the final input baseline.
+  const reservedRows = new Set(pieces.flatMap(({ rect }) => Array.from({ length: rect.height }, (_, y) => rect.y + y)));
+  const rowMap = {};
+  let outputRows = 0, gap = false;
+  for (let y = Math.min(...reservedRows); y <= Math.max(...reservedRows); y++) {
+    if (reservedRows.has(y)) { rowMap[y] = outputRows++; gap = false; }
+    else if (!gap) { outputRows++; gap = true; }
+  }
+  for (const run of scene.runs) {
+    if (run.kind === 'wire') { run.from.row = rowMap[run.from.row]; run.to.row = rowMap[run.to.row]; }
+    else run.row = rowMap[run.row];
+  }
+  scene.rows = outputRows + 1;
+  const inputDetail = random(config.ornamentSeed ?? config.seed, 'ornament:assembly:input');
+  const pair = inputDetail.pick(alphabets[config.alphabet].pairs);
+  const label = pair[0] + config.label + pair[1];
+  const input = expression(inputDetail, config.alphabet, 3, 2), inputText = renderExpression(input);
+  scene.text(outputRows, left(), label, 2).text(outputRows, left(label.length + 1), inputText, 4);
+  const right = expression(inputDetail, config.alphabet, 11, 4);
+  const rightPrompt = random(layoutSeed, 'structure:assembly:right').chance(0.65) ? renderExpression(right) : '';
+  return {
+    scene, cursor: label.length + inputText.length + 2, rightPrompt,
+    program: {
+      engine: 'spatial-assembly/2', lattice: { columns: 79, rows: artHeight },
+      traits: { spread, fragments, connectivity, focus, weights, operators: [...operators, 'evolve'], material: config.material, alphabet: config.alphabet, symmetry, density: config.density },
+      motif: shared, derivation: { zone, splits: plan.splits, pieces, links }, rowMap, annotations, input, right: rightPrompt ? right : null,
+      stats: { ...programStats(group(...pieces.map((p) => p.tree))), fragments: pieces.length, links: links.length, occupiedCells: occupied, span: width },
     },
   };
 }

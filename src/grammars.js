@@ -4,6 +4,7 @@ import { assemble } from './assembly.js';
 import { composePrompt } from './prompt.js';
 import { composeSurface } from './surface.js';
 import { composeRelations } from './relations.js';
+import { composeRelationsV7 } from './relations-v7.js';
 
 const runes = [...'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ'];
 const sigils = ['◈', '◈', '⊙', '⌬', '◇', '⊕'];
@@ -227,7 +228,7 @@ function xenoweave({ rng, ornament, label, complexity, glyphs }) {
 }
 
 export const grammars = {
-  compose: { description: 'Explore text relationships, surfaces, networks, and free spatial art', build: (config) => config.modern && ['surface', 'prompt'].includes(config.engine) ? composeRelations(config) : ({ surface: composeSurface, network: compose, assembly: assemble, prompt: composePrompt }[config.engine])(config) },
+  compose: { description: 'Explore text relationships, surfaces, networks, and free spatial art', build: (config) => config.modern && ['surface', 'prompt'].includes(config.engine) ? (config.evolved ? composeRelationsV7 : composeRelations)(config) : ({ surface: composeSurface, network: compose, assembly: assemble, prompt: composePrompt }[config.engine])(config) },
   signal: { description: 'Asymmetric relay traces and runic packets', build: signal },
   reliquary: { description: 'An alien seal suspended between inscribed rails', build: reliquary },
   mycelium: { description: 'Branching filaments and bioluminescent spores', build: mycelium },

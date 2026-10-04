@@ -1,8 +1,15 @@
 import { composeRelations } from './relations.js';
+import { composeRelationsV7 } from './relations-v7.js';
+import { integrateRoleBand } from './interactions.js';
 
 // Larger art retains its structural derivation. Its input band uses the same
 // protected role composer as a compact prompt, with space for the network port.
 export function withRoleBand(composition, config) {
+  if (config.evolved) {
+    const band = composeRelationsV7({ ...config, engine: 'surface', height: 1,
+      label: config.engine === 'network' ? '' : config.label });
+    return integrateRoleBand(composition, band, config);
+  }
   const { scene } = composition;
   const row = scene.rows - 1;
   const offset = config.engine === 'network' ? 4 : 0;

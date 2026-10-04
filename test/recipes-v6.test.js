@@ -6,13 +6,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDesign, fromRecipe, mutateDesign, recipe } from '../src/design.js';
+import { createDesign as generateDesign, fromRecipe, mutateDesign, recipe } from '../src/design.js';
 import { compile } from '../src/compile.js';
 import { generateColors } from '../src/chromatic.js';
 import { palettes } from '../src/palettes.js';
 
 const cli = fileURLToPath(new URL('../bin/promptly.js', import.meta.url));
 const engines = ['surface', 'prompt', 'assembly', 'network'];
+const createDesign = (options) => generateDesign({ version: 6, ...options });
 const composition = ({ scene, cursor, rightPrompt, program }) => ({ scene, cursor, rightPrompt, program });
 const colorState = ({ colors, colorSeed, colorProgram }) => ({ colors, colorSeed, colorProgram });
 const withoutColor = ({ colors, colorSeed, colorProgram, ...rest }) => rest;
@@ -25,7 +26,7 @@ const inspect = (...args) => {
   return JSON.parse(result.stdout);
 };
 
-test('all fresh procedural engines serialize as version 6 and round-trip exact exports', () => {
+test('version-6 procedural engines round-trip exact exports', () => {
   for (const engine of engines) {
     const design = createDesign({ engine, seed: `v6-roundtrip/${engine}`, complexity: 7, height: engine === 'network' ? 4 : 3 });
     assert.equal(design.version, 6);

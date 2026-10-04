@@ -16,7 +16,7 @@ test('fresh default sampling reaches the full complexity range in every procedur
   let compactDetailed = false, tallSimple = false;
   for (let i = 0; i < 480; i++) {
     const design = createDesign({ seed: `full-range/${i}` });
-    assert.equal(design.version, 6);
+    assert.equal(design.version, 7);
     assert.ok(Number.isInteger(design.complexity) && design.complexity >= 1 && design.complexity <= 10);
     levels[design.engine].add(design.complexity);
     counts[design.complexity]++;
@@ -101,7 +101,7 @@ test('bare and seed-only CLI exports contain complete resolved recipes', () => {
     const line = result.stdout.match(/^# Recipe: (.+)$/m);
     assert.ok(line, 'source includes its recipe');
     const saved = JSON.parse(line[1]);
-    assert.equal(saved.version, 6);
+    assert.equal(saved.version, 7);
     assert.ok(engines.includes(saved.engine));
     assert.ok(Number.isInteger(saved.complexity) && saved.complexity >= 1 && saved.complexity <= 10);
     assert.ok(Number.isInteger(saved.height));

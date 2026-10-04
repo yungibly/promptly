@@ -1,6 +1,8 @@
 import { Scene, anchor, left } from './scene.js';
 import { Network, point as p, key, trace, reflect, repeat } from './primitives.js';
 import { expression, renderExpression, alphabets, materials } from './ornaments.js';
+import { random } from './random.js';
+import { deriveMotif, evolveMotif } from './motifs.js';
 
 const operations = ['detour', 'loop', 'branch', 'fork', 'stitch', 'repeat'];
 const offset = (point, dx, dy) => p(point.x + dx, point.y + dy);
@@ -64,6 +66,7 @@ function compileNetwork(network, scene, cols, material) {
 // against graph occupancy at the narrowest full viewport; wider canvases only
 // expand the distances between anchors. No terminal output is produced here.
 function annotations(network, scene, config, rng, xAnchor) {
+  if (config.evolved) return evolvedAnnotations(network, scene, config, xAnchor);
   const { alphabet, complexity, label, labelRow, cols } = config;
   const minStep = 78 / (cols - 1);
   const occupied = new Set(network.nodes.keys());
@@ -121,6 +124,79 @@ function annotations(network, scene, config, rng, xAnchor) {
   return placements;
 }
 
+function evolvedAnnotations(network, scene, config, xAnchor) {
+  const { alphabet, complexity, label, labelRow, cols } = config;
+  const structure = random(config.artSeed ?? config.seed, 'structure:network:annotations');
+  const minStep = 78 / (cols - 1), occupied = new Set(network.nodes.keys()), slots = [];
+  const shared = deriveMotif(config.motifSeed ?? config.seed);
+  const detailSeed = config.ornamentSeed ?? config.seed;
+  const reserve = (x, y, radius) => {
+    for (let dx = -radius; dx <= radius; dx++) occupied.add(key(p(x + dx, y)));
+  };
+  const radiusFor = (width) => Math.ceil((width / 2 + 1) / minStep);
+  const put = (x, y, width, ink, role) => {
+    const motif = structure.chance(0.4);
+    slots.push({ id: slots.length, role, x, y, width, ink, motif,
+      ...(motif ? { step: slots.filter((slot) => slot.motif).length % 4 } : {}) });
+    reserve(x, y, radiusFor(width));
+  };
+  const labelPair = random(detailSeed, 'ornament:network:label').pick(alphabets[alphabet].pairs);
+  const labelText = labelPair[0] + label + labelPair[1];
+  scene.text(labelRow, left(3), labelText, 2);
+  const labelEnd = Math.ceil((labelText.length + 5) / minStep);
+  for (let i = 0; i < labelEnd; i++) occupied.add(key(p(i, labelRow)));
+  const clearOfLabel = (x, y, radius) => y !== labelRow || x - radius >= labelEnd;
+
+  for (const terminal of network.nodes.values()) {
+    if (terminal.neighbors.size !== 1 || terminal.x <= 1 || terminal.x >= cols - 2) continue;
+    if (structure.chance(0.55) && clearOfLabel(terminal.x, terminal.y, 1)) put(terminal.x, terminal.y, 1, structure.pick([2, 3, 4]), 'terminal');
+  }
+  const spans = network.spans(true).filter(({ a, b }) => b.x - a.x >= 5);
+  for (let i = 0; i < complexity + 2 && spans.length; i++) {
+    const span = structure.pick(spans), x = structure.int(span.a.x + 2, span.b.x - 2), y = span.a.y;
+    const width = structure.int(3, 9) + 2, radius = radiusFor(width);
+    if (x - radius <= span.a.x || x + radius >= span.b.x || !clearOfLabel(x, y, radius)) continue;
+    if (Array.from({ length: radius * 2 + 1 }, (_, j) => p(x + j - radius, y)).some((cell) => network.degree(cell) !== 2)) continue;
+    if (slots.some((slot) => slot.y === y && Math.abs(slot.x - x) < radius + radiusFor(slot.width))) continue;
+    put(x, y, width, structure.pick([2, 3]), 'inline');
+  }
+  let placed = 0;
+  for (let i = 0; i < 30 + complexity * 15 && placed < complexity * 2; i++) {
+    const x = structure.int(2, cols - 3), y = structure.int(0, network.height - 1);
+    const width = structure.int(1, 3 + complexity), radius = radiusFor(width);
+    if (x - radius < 1 || x + radius >= cols - 1) continue;
+    if (Array.from({ length: radius * 2 + 1 }, (_, j) => key(p(x + j - radius, y))).some((id) => occupied.has(id))) continue;
+    put(x, y, width, structure.pick([0, 1, 3]), 'free');
+    placed++;
+  }
+
+  // Structural slots are complete before any alphabet, line material, or detail
+  // choice is read. A motif echoes elsewhere in the prompt without moving its
+  // text reservations or changing a single edge in the network graph.
+  const placements = [];
+  for (const slot of slots) {
+    const detail = random(detailSeed, `ornament:network:annotation:${slot.id}`);
+    const padding = slot.role === 'inline' ? 1 : 0, width = slot.width - padding * 2;
+    let text, node, motif;
+    if (slot.motif) {
+      const evolved = evolveMotif(shared, { width, step: slot.step, ink: slot.ink });
+      const tones = Array.from({ length: 4 }, () => detail.pick(alphabets[alphabet].atoms));
+      const chars = Array(width).fill(' ');
+      for (const cell of evolved.cells) chars[cell.x] = cell.kind === 'mark' ? tones[cell.tone] : materials[config.material][cell.bits] || tones[0];
+      text = chars.join(''); node = { op: 'atom', value: text };
+      motif = { tree: evolved.tree, evolution: evolved.evolution };
+    } else {
+      node = expression(detail, alphabet, width);
+      const rendered = renderExpression(node), margin = Math.floor((width - rendered.length) / 2);
+      text = ' '.repeat(margin) + rendered + ' '.repeat(width - rendered.length - margin);
+    }
+    text = ' '.repeat(padding) + text + ' '.repeat(padding);
+    scene.text(slot.y, xAnchor(slot.x), text, slot.ink, 'center');
+    placements.push({ role: slot.role, x: slot.x, y: slot.y, width: slot.width, expression: node, ...(motif ? { motif } : {}) });
+  }
+  return { placements, plan: slots, motif: shared };
+}
+
 export function compose(config) {
   const { rng, ornament, complexity, glyphs, height, symmetry, material, alphabet } = config;
   const cols = 41;
@@ -171,7 +247,8 @@ export function compose(config) {
   // Connect the safe input row to the generated graph as a separate small path.
   scene.wire({ row: startRow, x: xAnchor(0) }, { row: height - 1, x: xAnchor(0) }, 1, materials[material]);
   scene.wire({ row: height - 1, x: xAnchor(0) }, { row: height - 1, x: left(3) }, 1, materials[material]);
-  const placements = annotations(network, scene, { ...config, cols, labelRow }, ornament, xAnchor);
+  const annotationResult = annotations(network, scene, { ...config, cols, labelRow }, ornament, xAnchor);
+  const placements = config.evolved ? annotationResult.placements : annotationResult;
   const inputExpression = expression(ornament, alphabet, 3, 2);
   const input = renderExpression(inputExpression);
   scene.text(height - 1, left(4), input, 4);
@@ -185,6 +262,7 @@ export function compose(config) {
       reservations,
       traits: { material, alphabet, symmetry, density: config.density, weights },
       derivation, annotations: placements, input: inputExpression, right: rightExpression,
+      ...(config.evolved ? { annotationPlan: annotationResult.plan, motif: annotationResult.motif } : {}),
       stats: {
         rewrites: derivation.length - 1,
         maxDepth: Math.max(...derivation.map((step) => step.depth)),
