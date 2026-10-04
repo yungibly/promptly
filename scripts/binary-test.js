@@ -5,8 +5,9 @@ import { spawnSync } from 'node:child_process';
 import { copyFileSync, chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
-import { createDesign } from '../src/design.js';
+import { createDesign, recipe } from '../src/design.js';
 import { compile } from '../src/compile.js';
+import { createExplorerState, explorerAction, explorerFragments } from '../src/exploration.js';
 import packageInfo from '../package.json' with { type: 'json' };
 
 const directory = mkdtempSync(join(tmpdir(), 'promptly-binary-'));
@@ -62,5 +63,56 @@ try {
   assert.match(portable.stdout, /brew/);
   assert.match(portable.stdout, /^[\x00-\x7f]*$/);
   checks += 4;
-  console.log(`PASS ${checks} standalone checks: isolated binary, all engines, empty PATH, source/preview, and config isolation`);
+
+  // Saved component seeds need to survive bundling and filesystem relocation,
+  // including values different from the root seed. No source modules or JS
+  // runtime are available to the copied executable in this working directory.
+  const isolated = { ...environment, PATH: '/no-external-runtime' };
+  for (const engine of ['surface', 'prompt', 'network', 'assembly']) {
+    const design = createDesign({ version: 7, engine, seed: `packaged-recipe/${engine}`, label: 'finn',
+      complexity: 8, height: engine === 'network' ? 4 : 3,
+      artSeed: `art/${engine}`, layoutSeed: `layout/${engine}`, roleSeed: `roles/${engine}`,
+      motifSeed: `motif/${engine}`, interactionSeed: `interactions/${engine}`, ornamentSeed: `detail/${engine}` });
+    const saved = recipe(design), file = `${engine} component recipe.json`;
+    writeFileSync(join(directory, file), JSON.stringify(saved));
+    const inspected = run(['inspect', '--from', file], isolated);
+    assert.equal(inspected.stderr, '');
+    assert.deepEqual(JSON.parse(inspected.stdout), saved);
+    const replayed = run(['--from', file], isolated);
+    assert.equal(replayed.stderr, '');
+    assert.equal(replayed.stdout, compile(design));
+    checks += 4;
+  }
+
+  // Exercise a recipe produced by a real local pin/reroll, with a mixture of
+  // retained and regenerated piece seeds, rather than only an untouched design.
+  const initial = createDesign({ version: 7, engine: 'assembly', seed: 'packaged-pinned', height: 6,
+    fragments: 6, spread: 1, connectivity: 1, complexity: 8 });
+  const [fragment] = explorerFragments(initial);
+  let state = explorerAction(createExplorerState({ design: initial }), { type: 'pin', target: 'fragment', id: fragment.id });
+  state = explorerAction(state, { type: 'pin', target: 'colors' });
+  state = explorerAction(state, { type: 'reroll', seed: 'packaged-new-neighbors' });
+  const pinned = recipe(state.current), previous = recipe(initial);
+  assert.equal(pinned.fragmentSeeds[fragment.id], previous.fragmentSeeds[fragment.id]);
+  assert.ok(Object.entries(pinned.fragmentSeeds).some(([id, seed]) => id !== fragment.id && seed !== previous.fragmentSeeds[id]));
+  writeFileSync(join(directory, 'pinned fragment recipe.json'), JSON.stringify(pinned));
+  const pinnedSource = run(['--from', 'pinned fragment recipe.json'], isolated);
+  assert.equal(pinnedSource.stderr, '');
+  assert.equal(pinnedSource.stdout, compile(state.current));
+  const pinnedRecipe = run(['inspect', '--from', 'pinned fragment recipe.json'], isolated);
+  assert.equal(pinnedRecipe.stderr, '');
+  assert.deepEqual(JSON.parse(pinnedRecipe.stdout), pinned);
+  checks += 6;
+
+  // The TUI is dynamically imported. This clean rejection proves that its
+  // modules were bundled, without pretending a piped process is a terminal.
+  const explore = spawnSync(binary, ['explore', '--seed', 'packaged-explorer'], {
+    cwd: directory, env: isolated, encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 1024,
+  });
+  assert.ifError(explore.error);
+  assert.equal(explore.status, 1);
+  assert.equal(explore.stdout, '');
+  assert.equal(explore.stderr, 'promptly: Explore needs an interactive terminal on stdin and stderr. Use promptly export for scripts.\n');
+  checks += 3;
+  console.log(`PASS ${checks} standalone checks: isolated binary, all engines, empty PATH, source/preview, config isolation, v7 recipe replay, pinned fragments, and bundled explorer`);
 } finally { rmSync(directory, { recursive: true, force: true }); }

@@ -1,0 +1,100 @@
+{
+  "version": 7,
+  "seed": "asymmetric-caps/1",
+  "style": "compose",
+  "palette": "generated",
+  "complexity": 8,
+  "glyphs": "powerline",
+  "label": "",
+  "info": true,
+  "material": "double",
+  "alphabet": "granular",
+  "symmetry": "none",
+  "height": 1,
+  "density": 0.488,
+  "ornamentSeed": "asymmetric-caps/1",
+  "engine": "surface",
+  "spread": 0.866,
+  "fragments": 4,
+  "connectivity": 0,
+  "weight": 1,
+  "artSeed": "asymmetric-caps/1",
+  "layoutSeed": "asymmetric-caps/1",
+  "roleSeed": "asymmetric-caps/1",
+  "motifSeed": "asymmetric-caps/1",
+  "interactionSeed": "asymmetric-caps/1",
+  "fragmentSeeds": {},
+  "colorSeed": "asymmetric-caps/1",
+  "colors": [
+    "#836c5f",
+    "#878259",
+    "#f19c66",
+    "#4dbdb0",
+    "#c2b239",
+    "#eadfd9",
+    "#25220a"
+  ],
+  "colorProgram": {
+    "generator": "chromatic-relationships/1",
+    "space": "oklch",
+    "baseHue": 52.102383,
+    "hueSpread": 132.56157,
+    "balance": 0.373921,
+    "chroma": 0.14563,
+    "lightness": 0.750042,
+    "lightnessSpread": 0.039258,
+    "referenceBackground": "#242733",
+    "surfaceIndex": 6,
+    "roles": [
+      {
+        "role": "quiet",
+        "lightness": 0.549628,
+        "chroma": 0.034951,
+        "hue": 52.102383,
+        "hex": "#836c5f"
+      },
+      {
+        "role": "line",
+        "lightness": 0.599242,
+        "chroma": 0.058252,
+        "hue": 101.669938,
+        "hex": "#878259"
+      },
+      {
+        "role": "accent1",
+        "lightness": 0.766829,
+        "chroma": 0.123824,
+        "hue": 52.102383,
+        "hex": "#f19c66"
+      },
+      {
+        "role": "accent2",
+        "lightness": 0.73207,
+        "chroma": 0.103299,
+        "hue": 184.663953,
+        "hex": "#4dbdb0"
+      },
+      {
+        "role": "accent3",
+        "lightness": 0.755162,
+        "chroma": 0.137794,
+        "hue": 101.669938,
+        "hex": "#c2b239"
+      },
+      {
+        "role": "text",
+        "lightness": 0.911023,
+        "chroma": 0.014563,
+        "hue": 52.102383,
+        "hex": "#eadfd9"
+      },
+      {
+        "role": "surface",
+        "lightness": 0.248139,
+        "chroma": 0.038951,
+        "hue": 101.669938,
+        "hex": "#25220a"
+      }
+    ]
+  }
+}

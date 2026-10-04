@@ -4,10 +4,18 @@ A seeded generative art instrument that exports standalone zsh prompts with your
 live username and current directory. Automatic sampling explores painted text
 surfaces, compact line art, connected networks, and freeform cell art. Text roles
 define protected intervals; shared or individual treatments grow around them.
+Strokes can attach to live fields or pass behind them, and evolving motifs echo
+across fragments and text treatments. An optional terminal explorer lets you keep
+parts of a discovery while rerolling its surroundings.
 Color relationships are generated continuously. Arrangement, visual weight,
 color, and detail vary independently. No Git, clocks, network calls, or runtime agent.
 
-[Default rolls rendered through Ghostty](docs/defaults-1.png)
+[New default rolls rendered through Ghostty](docs/v7-defaults.png)
+· [Shapes with fixed colors](docs/v7-normalized.png)
+· [Shared artwork and live text](docs/v7-interactions.png)
+· [Asymmetric horizontal caps](docs/v7-caps.png)
+· [Interactive explorer](docs/explorer.png)
+· [Earlier default rolls](docs/defaults-1.png)
 · [More default rolls](docs/defaults-2.png)
 · [Range extremes](docs/default-extremes-1.png)
 · [Defaults with fixed colors](docs/defaults-1-normalized.png)
@@ -77,6 +85,26 @@ truncate inside reserved cells, so they cannot displace the artwork or input.
 
 ## Explore
 
+```sh
+promptly explore
+promptly explore --favorites favorites.json --out winner.zsh
+promptly explore --from design.json
+```
+
+Space rerolls. `s` pins the whole shape, `l` pins the text layout, and `c` pins
+colors. On assembly designs, use Up/Down to focus a fragment and `p` to pin it;
+`v` switches between focused and complete previews. Mirrored partners form one
+fragment. Local pins hold the composition's frame and controls while unpinned
+pieces change. With no structural pins, rerolls explore the full automatic range.
+
+Press `f` to keep a favorite, `[`/`]` to browse favorites, Tab to compare the
+reference with your current roll, and Enter to adopt the reference. `e` exports
+the current design and closes the explorer; `q` quits. Favorites stay in memory
+unless you supply `--favorites`. An explicit favorites file is updated when you
+save. Exports refuse to replace existing files unless `--force` is supplied.
+The explorer uses stdin and stderr for its terminal interface, so
+`promptly explore > winner.zsh` keeps exported shell code separate from the UI.
+
 `--engine auto` is the default. It samples an eligible procedural engine, a row
 budget, and complexity independently. Fresh composed prompts sample each integer
 complexity from 1 through 10 with equal probability; choosing an explicit engine
@@ -120,7 +148,12 @@ range continuously from restrained near-monochrome colors to separated accents.
 `paper`, `primary`, and `velvet`, remain optional color bookmarks. Filled text
 keeps colored ink when legible, with black or white as a contrast fallback.
 The network and assembly engines retain their artwork and use the same role-band
-composer for live information. Saved older recipes retain their original shapes.
+composer for live information. Some rolls place that information within the art,
+masking protected text or attaching a short stroke to its edge. Other rolls keep
+the fields separate. Compact surfaces can have independent round, flat, or angled
+ends and gaps between fields; no curved top/bottom block contours are added.
+Shared motifs can shorten, shift, thin, or fragment inside fixed bounds. Saved
+older recipes retain their original shapes.
 
 ```sh
 promptly inspect --seed growth --complexity 8 --out design.json
@@ -137,8 +170,9 @@ For role compositions it also reports grouping, input relationships, accepted an
 rejected proposals, weight budgets, and the planning-to-display row map.
 All mutation scopes preserve resolved colors; use `--color-seed` to resample them.
 Ordinary `inspect` emits the reloadable recipe, with the selected engine and every
-sampled control resolved. Fresh composed designs use version 6, including visual
-weight. Generated colors persist as `colors`, `colorSeed`, and `colorProgram`. Saved version-1–5
+sampled control resolved. Fresh composed designs use version 7, including separate
+component and fragment seeds so pinned discoveries replay exactly. Generated
+colors persist as `colors`, `colorSeed`, and `colorProgram`. Saved version-1–6
 recipes preserve their generators and appearance; version-1–4 recipes without an
 `info` field retain their original static labels.
 Existing output files require `--force` to replace. See `--help` for every control.
@@ -150,7 +184,7 @@ The displayed seed reproduces each specimen with `preview` or `export`.
 
 Default Unicode mode uses single-cell glyphs and no private-use/Nerd Font
 characters, and expects a UTF-8 shell locale. `--glyphs powerline` replaces the
-round end caps with full-height Powerline half-circles; it needs a font or terminal
+round and angled end caps with full-height Powerline glyphs; it needs a font or terminal
 renderer covering those glyphs. `--glyphs ascii` uses the same geometry with ASCII
 substitutions. All modes retain the same structural derivation. Unfilled artwork
 targets dark backgrounds; filled surfaces paint only their own cells and select readable text

@@ -16,6 +16,15 @@
 - `src/relations.js`: the version-6 role composer. Protected text intervals form
   relation trees; atomic treatments can attach to individual roles or groups.
   One visual-weight budget controls paint and edges independently of complexity.
+- `src/relations-v7.js`: compatible body/accent layers, independent side ends,
+  protected surface cutouts, and motifs around role intervals.
+- `src/interactions.js`: structural artwork ports, protected text masks, and
+  optional attachments/occlusion. Overlays never delete the underlying graph.
+- `src/motifs.js`: shared stroke rhythms with graded shortening, shifting,
+  thinning, and fragmentation inside fixed bounds.
+- `src/exploration.js`: deterministic rerolls, local pins, and favorite recipes.
+- `src/explorer.js`: optional terminal UI, native zsh previews, explicit favorites
+  persistence, and source export. Cursor controls are confined to this CLI UI.
 - `src/prompt.js` and `src/surface.js`: frozen version-4 compact and version-5
   surface generators, retained for saved recipes. Their shape catalogues no longer
   determine fresh compact compositions.
@@ -28,7 +37,8 @@
   filled text. Existing collections are unchanged for recipe compatibility.
 - `src/assembly.js`: freeform composition. Partitions a seeded spatial region,
   generates independent recursive pieces, optionally links eligible neighbors,
-  decorates them, and removes unused vertical margins. No mandatory backbone.
+  and decorates them. Version 7 compacts reserved regions rather than painted
+  occupancy so local rerolls retain placement and intentional empty cells.
 - `src/gallery.js`: balances engine representation, then deterministically selects
   distant specimens using geometric features;
   palettes and alphabets do not substitute for different silhouettes.
@@ -51,10 +61,50 @@
   Resolve widths 1–1000 during generation, coalesce adjacent widths with identical
   string plans, and share repeated rows when that reduces output size. This moves
   work into the CLI; exported prompts contain no drawing interpreter.
+  Version 7 uses a balanced arithmetic width selector to avoid zsh stack limits
+  when overlapping anchors produce many width transitions; older source stays exact.
 - `src/runtime.zsh`: small installation/undo wrapper for those strings. Native
   parameter expansion selects the width case and pads its gaps without a fork.
 - `src/preview.js`: executes the same source in `zsh -f`; no separate art renderer.
 - `bin/promptly.js`: human/agent CLI, JSON recipes, preview, mutation, export.
+
+## Version 7 component composition and exploration
+
+Fresh composed recipes resolve `artSeed`, `layoutSeed`, `roleSeed`, `motifSeed`,
+`interactionSeed`, and `fragmentSeeds`. Main seeds remain bounded at 256
+characters; component seeds allow 512 characters for derived fragment names.
+Saved versions 1–6 use their frozen paths. Twelve version-6 source/scene hashes
+cover all four engines and glyph modes in `test/fixtures/v6-baseline.json`.
+
+`layoutSeed` controls assembly partitions and fragment rectangles. Each logical
+piece has a `piece:N` ID and its own seed; reflected partners share that ID.
+Piece geometry and detail streams cannot consume a neighbor's RNG state. Row
+compaction follows reservations rather than occupied cells, preserving pinned
+positions and the negative space of partially erased fragments. Optional bridges
+require facing occupied rectangle-boundary ports and paint only the gap. Artwork
+runs carry `fragmentId` metadata for temporary explorer focus; compilation ignores
+this metadata.
+
+The role and interaction seeds choose field placement before artwork occupancy
+is consulted. Connections can be rejected without moving a field. Explicit
+padding masks protect live text while the original network graph stays intact.
+Compact body and accent proposals can coexist when their cells and global weight
+budget permit it. Left and right surface ends vary independently; surface masks
+only subtract gaps between fields, never any live character reservation.
+
+The explorer is a generator-side process. It uses the same native-zsh preview
+as every other path and restores terminal raw mode, screen state, and handlers
+on export, quit, interrupts, and errors. UI goes to stderr; stdout contains only
+an explicitly exported prompt. Favorite files are opt-in JSON recipe arrays,
+written atomically; prompt exports use exclusive creation unless forced.
+
+Without local pins, rerolls resample the full automatic space subject to explicit
+CLI controls. Shape pins retain all component geometry. Layout pins hold field
+positions while artwork changes. Fragment pins hold the composition frame,
+role masks, motif, and detail seed, then resample only unpinned fragment seeds.
+Color pins preserve resolved color values. Favorites save the complete resulting
+recipe, including independently rerolled pieces; loading a favorite clears pins.
+Reference comparison never silently changes the current export target.
 
 The top decoration occupies a multiline left prompt canvas. The input
 row has an ordinary short left prompt and a native right prompt. This lets zsh
@@ -123,13 +173,14 @@ grammar fields. Version 2 adds resolved material, alphabet, symmetry, height,
 density, and ornament seed for
 `graph-rewrite/1`. Version 3 selects `spatial-assembly/1` and adds engine, spread,
 fragments, and connectivity. Version 4 uses the same control fields for
-`prompt-composition/1`. Version 5 uses `surface-composition/1`. Fresh composed
-designs use version 6: compact engines use `role-relations/1`, and larger engines
+`prompt-composition/1`. Version 5 uses `surface-composition/1`. In version 6,
+compact engines use `role-relations/1`, and larger engines
 retain their art with the shared role band. Version 6 records `weight`; generated
 colors store `colors`, `colorSeed`, and `colorProgram`. The optional `info`
 field records live-field behavior; new designs enable it, while version-1–4 recipes
 without the field load with their original static inscriptions. Loading versions
-1–5 still selects their unchanged generators. Resolved recipes freeze the engine
+1–6 still selects their unchanged generators. Fresh designs use version 7, as
+described above. Resolved recipes freeze the engine
 and all sampled controls;
 `auto` is never stored as an unresolved renderer. Regression tests hash the previous
 network and assembly scenes and derivations independently of runtime source.
@@ -145,7 +196,7 @@ sampling.
 `auto` filters engines by explicit controls, then selects with a dedicated seeded
 RNG stream. Surface and prompt support 1–3 rows, assembly 2–12, and network 4–12.
 Explicit spread/fragments/connectivity exclude network because it has different semantics.
-Fresh version-6 compositions sample omitted complexity uniformly over integers
+Version-6 and version-7 compositions sample omitted complexity uniformly over integers
 1–10 using `trait:complexity`. Fresh automatic and explicitly selected engines
 both sample their row budget through the independent `trait:auto-height` stream:
 surface/prompt use `[1, 2, 2, 3]`, assembly `[2, 3, 4, 6, 8, 12]`, and network

@@ -1,0 +1,66 @@
+// Integration checks share the main suite's real Ghostty session. UI actions
+// await a visible result: visual-idle alone can precede a native zsh preview.
+import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { fromRecipe } from '../src/design.js';
+import { preview } from '../src/preview.js';
+import { quoteZsh } from '../src/compile.js';
+
+export function testExplorer({ tui, state, check, eventually, snapshot, output }) {
+  const file = (name) => `${output}/explorer-${name}`;
+  for (const name of ['favorites.json', 'winner.zsh', 'stdout.zsh', 'out-stdout.txt']) rmSync(file(name), { force: true });
+  const key = (...keys) => tui('key', 'press', ...keys);
+  const submit = (command) => tui('submit', command);
+  const waitText = (text) => eventually(() => state().text.includes(text), `explorer did not reach ${text}`);
+  const shell = () => eventually(() => !state().modes.alternate_screen && state().text.trimEnd().endsWith('before>'), 'explorer did not restore the shell');
+  const favorites = () => existsSync(file('favorites.json')) ? JSON.parse(readFileSync(file('favorites.json'), 'utf8')) : [];
+  const normalize = (text) => text.split('\n').map((line) => line.trimEnd()).join('\n').trimEnd();
+  tui('resize', '120', '28');
+  submit('clear'); shell();
+  submit(`node bin/promptly.js explore --seed explore/1 --engine assembly --height 8 --fragments 4 --favorites ${quoteZsh(file('favorites.json'))} --out ${quoteZsh(file('winner.zsh'))} > ${quoteZsh(file('out-stdout.txt'))}`);
+  waitText('seed explore/1 |');
+  check(state().modes.alternate_screen, 'explorer did not enter its alternate screen');
+  snapshot('explorer-initial');
+  key('s', 'c', 'Down', 'p', 'f'); waitText('Favorite 1 saved');
+  check(state().text.includes('shape PINNED') && state().text.includes('colors PINNED'), 'explorer pins missing');
+  check(favorites().length === 1 && state().text.includes('FOCUS'), 'explorer did not focus/save the selected fragment');
+  snapshot('explorer-pinned');
+  key('Space'); eventually(() => !state().text.includes('seed explore/1 |'), 'explorer pinned reroll did not finish');
+  key('s', 'Space', 'f'); waitText('Favorite 2 saved');
+  const saved = favorites();
+  check(saved.length === 2 && saved[0].fragmentSeeds['piece:1'] === saved[1].fragmentSeeds['piece:1'], 'local reroll changed the pinned fragment seed');
+  check(saved[0].artSeed !== saved[1].artSeed && saved[0].colorSeed === saved[1].colorSeed, 'local reroll did not preserve only the chosen components');
+  check(state().text.includes('Fragment 2/4: Fragment 2  [PINNED] FOCUS'), 'reroll lost the selected fragment');
+  snapshot('explorer-local-reroll');
+  key('['); waitText('REFERENCE 1/2'); snapshot('explorer-compare');
+  key('Tab'); waitText('CURRENT |');
+  tui('resize', '40', '12'); waitText('Enlarge the terminal'); snapshot('explorer-small');
+  tui('resize', '120', '28'); waitText('colors PINNED');
+  check(!state().text.includes('Enlarge the terminal'), 'resize left stale explorer text');
+  snapshot('explorer-restored');
+  key('e'); shell();
+  const source = readFileSync(file('winner.zsh'), 'utf8');
+  check(source.startsWith('# Promptly') && !source.includes('\x1b'), 'winner contains UI data rather than source');
+  check(readFileSync(file('out-stdout.txt'), 'utf8') === '', '--out polluted stdout');
+  const winner = fromRecipe(JSON.parse(source.match(/^# Recipe: (.+)$/m)[1]));
+  check(winner.seed === saved[1].seed, 'comparison silently changed the selected export');
+  submit(`source ${quoteZsh(file('winner.zsh'))}; source ${quoteZsh(file('winner.zsh'))}; clear`);
+  eventually(() => normalize(state().text) === normalize(preview(winner, { width: 120, color: false })), 'explorer export differs from native preview');
+  check(state().cursor.x === winner.cursor && state().cursor.y === winner.scene.rows - 1, 'exported winner input drifted');
+  tui('type', 'echo winn3r'); key('Left', 'Left', 'Delete'); tui('type', 'e'); key('Ctrl+E', 'Enter');
+  waitText('\nwinner\n');
+  submit('promptly_off; clear'); shell();
+  const packaged = existsSync('dist/promptly');
+  submit(`${packaged ? './dist/promptly' : 'node bin/promptly.js'} explore --seed export-stdout > ${quoteZsh(file('stdout.zsh'))}`);
+  waitText('seed export-stdout |'); key('Space');
+  eventually(() => !state().text.includes('seed export-stdout |'), 'packaged explorer reroll did not finish');
+  key('e'); shell();
+  const stdout = readFileSync(file('stdout.zsh'), 'utf8');
+  check(stdout.startsWith('# Promptly') && !stdout.includes('\x1b'), 'stdout includes explorer escape sequences');
+  submit(`node bin/promptly.js explore --seed cannot-replace --out ${quoteZsh(file('winner.zsh'))}`);
+  waitText('seed cannot-replace |'); key('e'); waitText('already exists'); snapshot('explorer-existing-file'); key('q'); shell();
+  check(readFileSync(file('winner.zsh'), 'utf8') === source, 'explorer overwrote an existing export');
+  submit('node bin/promptly.js explore --seed interrupt'); waitText('seed interrupt |'); key('Ctrl+C'); shell();
+  submit('print -r -- "STATUS:$?"'); waitText('\nSTATUS:130\n');
+  console.log('PASS explorer focus, pins, local reroll, favorites, comparison, resize, stdout/file export, live editing, no-clobber and interrupt cleanup');
+  return { favorites: saved.length, fragment: 'piece:1', resizeWidths: [40, 120], liveExport: true, packaged };
+}
