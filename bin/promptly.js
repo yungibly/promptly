@@ -23,6 +23,7 @@ const help = `
 
   promptly preview [options]       Render a design using its actual zsh runtime
   promptly gallery [options]       Explore a collection of diverse specimens
+  promptly explore [options]       Reroll, pin parts, compare favorites, export a winner
   promptly export [options]        Write a standalone, sourceable .zsh prompt
   promptly inspect [options]       Print a recipe, or --program for its derivation
   promptly mutate [options]        Vary a recipe while preserving its art direction
@@ -51,6 +52,7 @@ const help = `
   --width N                       Preview width (default: terminal width or 100)
   --count N                       Gallery size (default: 5; maximum: 24)
   --from FILE                     Load a saved JSON recipe
+  --favorites FILE                Explorer favorites library (otherwise session-only)
   --variation TEXT                Mutation suffix (default: fresh random seed)
   --scope all|structure|ornament   Mutate independently (default: all)
   --program                       Inspect primitive operations, ancestry, and stats
@@ -62,6 +64,7 @@ const help = `
   --help                          Show this help
 
   promptly gallery --seed possibility --complexity 7 --label finn
+  promptly explore --favorites favorites.json --out winner.zsh
   promptly --seed moth --out moth.zsh
   source ./moth.zsh
   promptly_off                    Restore the previous prompt in that shell
@@ -83,7 +86,7 @@ function integer(value, fallback, min, max, name) {
   return n;
 }
 
-function main() {
+async function main() {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
@@ -93,7 +96,7 @@ function main() {
       material: { type: 'string' }, alphabet: { type: 'string' }, symmetry: { type: 'string' },
       engine: { type: 'string' }, spread: { type: 'string' }, fragments: { type: 'string' }, connectivity: { type: 'string' },
       height: { type: 'string' }, density: { type: 'string' }, scope: { type: 'string' }, program: { type: 'boolean' },
-      width: { type: 'string' }, count: { type: 'string' }, from: { type: 'string' },
+      width: { type: 'string' }, count: { type: 'string' }, from: { type: 'string' }, favorites: { type: 'string' },
       variation: { type: 'string' }, out: { type: 'string' },
       force: { type: 'boolean' }, 'no-color': { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
       info: { type: 'boolean' }, 'no-info': { type: 'boolean' },
@@ -114,20 +117,31 @@ function main() {
     process.stdout.write(`\nENGINES\n  auto (mixed), surface (color and role shapes), prompt (compact), assembly (freeform), network (connected)\n\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
     return;
   }
-  if (!['preview', 'gallery', 'export', 'inspect', 'mutate'].includes(command)) throw new Error(`Unknown command: ${command}. See --help.`);
-  if (values.out && !['export', 'inspect', 'mutate'].includes(command)) throw new Error('--out is available for export, inspect, and mutate.');
+  if (!['preview', 'gallery', 'explore', 'export', 'inspect', 'mutate'].includes(command)) throw new Error(`Unknown command: ${command}. See --help.`);
+  if (values.out && !['export', 'inspect', 'mutate', 'explore'].includes(command)) throw new Error('--out is available for export, inspect, mutate, and explore.');
+  if (values.favorites && command !== 'explore') throw new Error('--favorites is available for explore.');
   if (values.program && command !== 'inspect') throw new Error('--program is available for inspect.');
   if (values.scope && command !== 'mutate') throw new Error('--scope is available for mutate.');
   const base = values.from ? recipe(fromRecipe(JSON.parse(readFileSync(values.from, 'utf8')))) : {};
   const options = { ...base };
+  if (base.version >= 7 && values.seed !== undefined && values.seed !== base.seed) {
+    // Resolved component seeds make saved pin state replayable, but an explicit
+    // new master seed asks for new geometry rather than a renamed old recipe.
+    for (const key of ['artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed', 'fragmentSeeds', 'ornamentSeed']) delete options[key];
+  }
+  if (values.engine !== undefined && values.engine !== base.engine) {
+    delete options.fragmentSeeds;
+    if (values.engine === 'network') for (const key of ['spread', 'fragments', 'connectivity']) delete options[key];
+  }
+  const explorerOptions = {};
   if (values.info && values['no-info']) throw new Error('Choose either --info or --no-info.');
-  if (values.info || values['no-info']) options.info = !!values.info;
+  if (values.info || values['no-info']) options.info = explorerOptions.info = !!values.info;
   for (const key of ['seed', 'style', 'palette', 'complexity', 'label', 'glyphs', 'engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'spread', 'fragments', 'connectivity', 'weight']) {
-    if (values[key] !== undefined) options[key] = values[key];
+    if (values[key] !== undefined) options[key] = explorerOptions[key] = values[key];
   }
   if (values['color-seed'] !== undefined) {
-    options.colorSeed = values['color-seed'];
-    options.palette = values.palette ?? 'generated';
+    options.colorSeed = explorerOptions.colorSeed = values['color-seed'];
+    options.palette = explorerOptions.palette = values.palette ?? 'generated';
     delete options.colors;
     delete options.colorProgram;
   }
@@ -136,7 +150,13 @@ function main() {
   const color = !values['no-color'] && process.env.NO_COLOR === undefined;
   const renderOptions = { width, color };
 
-  if (command === 'export') {
+  if (command === 'explore') {
+    const { runExplorer } = await import('../src/explorer.js');
+    const result = await runExplorer({ design, options: explorerOptions, favoritesFile: values.favorites, out: values.out, force: values.force, color });
+    if (result.source) process.stdout.write(result.source);
+    if (result.path) process.stderr.write(`Saved ${result.path}\n`);
+    if (result.exitCode) process.exitCode = result.exitCode;
+  } else if (command === 'export') {
     const source = compile(design);
     if (values.out) save(values.out, source, values.force);
     else process.stdout.write(source);
@@ -171,7 +191,7 @@ process.stdout.on('error', (error) => {
   process.exit(1);
 });
 
-try { main(); }
+try { await main(); }
 catch (error) {
   process.stderr.write(`promptly: ${error.message}\n`);
   process.exitCode = 1;
