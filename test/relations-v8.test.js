@@ -79,26 +79,36 @@ test('repairs stay within the height budget and band leaders move with their ban
   }
 });
 
-test('compact prompts carry one textured idea rather than bare text', () => {
-  let empty = 0, textured = 0;
-  const n = 200;
+test('compact prompts carry one textured idea, outside related text, rather than bare text', () => {
+  let empty = 0, textured = 0, accents = 0;
+  const n = 240;
   for (let i = 0; i < n; i++) {
     const design = compact(`v8-texture/${i}`);
     const { paint, traits, derivation } = design.program;
     const ops = new Set(derivation.accepted.map((p) => p.op));
     const canvases = paint.map((p) => p.canvas).filter(Boolean);
-    // One idea: every textured canvas shares the prompt's kind; a bed makes
-    // the bed the idea and leaves only a quiet rhythm elsewhere.
-    // An elbow is a gradient line into command entry, whatever the idea.
-    assert.ok(canvases.every((kind) => ['bed', 'elbow', traits.idea].includes(kind) || kind === 'rhythm' && ops.has('bed')), `${design.seed}: ${canvases}`);
+    // One idea: a one-row kind, its two-row partner where a strip joins a
+    // tail, a bed, elbows, and quiet rhythms. Braille grit stays out, and
+    // automata and meanders only appear two rows tall.
+    assert.ok(canvases.every((kind) => ['bed', 'elbow', 'rhythm', traits.idea, traits.tall].includes(kind)), `${design.seed}: ${canvases}`);
+    assert.ok(!canvases.some((kind) => ['wave', 'sprig'].includes(kind)) && !['wave', 'sprig', 'automaton', 'truchet'].includes(traits.idea), design.seed);
+    for (const [i, p] of paint.entries()) if (['automaton', 'truchet'].includes(p.canvas)) assert.ok(ops.has('strip') && derivation.strip, `${design.seed}: ${p.canvas} in one row`);
+    // Texture never sits between clusters of one line.
+    for (const line of derivation.lines) for (const id of line.clusters.slice(0, -1)) {
+      assert.ok([null, 'rhythm', 'bed'].includes(paint[id].canvas), `${design.seed}: texture between related text`);
+    }
     if (ops.has('bed')) assert.ok(!ops.has('strip') && canvases.every((kind) => ['bed', 'rhythm', 'elbow'].includes(kind)), `${design.seed}: more than one large gesture`);
-    assert.ok([...design.rightPrompt].length <= 12, `${design.seed}: accent too long`);
-    if (design.rightRuns) assert.equal(design.rightRuns.map((r) => r.text).join(''), design.rightPrompt);
+    if (design.rightPrompt) {
+      accents++;
+      assert.ok(!ops.has('strip') && [...design.rightPrompt].length <= 12 && !/[\u2800-\u28ff]/u.test(design.rightPrompt), `${design.seed}: accent`);
+      assert.equal(design.rightRuns.map((r) => r.text).join(''), design.rightPrompt);
+    }
     if (!canvases.length && !ops.has('strip') && !design.rightPrompt) empty++;
     if (traits.idea !== 'rhythm') textured++;
   }
   assert.ok(empty < n * 0.05, `${empty} prompts without any deliberate idea`);
   assert.ok(textured > n * 0.6, `${textured} textured prompts`);
+  assert.ok(accents > 0 && accents < n * 0.15, `${accents} accents`);
 });
 
 test('weight, ornament, and color never move a version-8 field or the input anchor', () => {
