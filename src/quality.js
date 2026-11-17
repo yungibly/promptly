@@ -10,7 +10,16 @@ const TEXTLIKE = /[A-Za-z0-9?!=+*~]/;
 
 export function quality(input) {
   const { design, rows, width, grid, roleGrid, glyphs } = occupancy(input);
-  const art = (x, y) => grid[y][x] && !roleGrid[y][x];
+  // A static label is requested text, not stray artwork.
+  const label = Array.from({ length: rows }, () => Array(width).fill(false));
+  if (design.label) for (let y = 0; y < rows; y++) {
+    const line = glyphs[y].join('');
+    for (let i = line.indexOf(design.label); i >= 0; i = line.indexOf(design.label, i + 1)) {
+      for (let x = i; x < i + design.label.length; x++) label[y][x] = true;
+    }
+  }
+  // Live text is excluded, but a filled surface behind it is still artwork.
+  const art = (x, y) => grid[y][x] === 3 || grid[y][x] && !roleGrid[y][x] && !label[y][x];
   let total = 0, textlike = 0;
   const rowArt = Array(rows).fill(0);
   for (let y = 0; y < rows; y++) for (let x = 0; x < width; x++) if (art(x, y)) {
