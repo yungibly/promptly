@@ -39,3 +39,12 @@ test('curation keeps the first roll\'s engine and is deterministic for given see
     if (other.engine === chosen.engine) assert.ok(quality(other).score <= score);
   }
 });
+
+test('requested text and filled surfaces behind live fields are not penalized', () => {
+  const labeled = (label) => quality(createDesign({ seed: 'quality-label', engine: 'prompt', height: 1, weight: 0, label })).score;
+  assert.equal(labeled('abcdefgh'), labeled('........'));
+  const filled = createDesign({ seed: 'filled/2', engine: 'surface', height: 1, weight: 1 });
+  const bare = createDesign({ seed: 'filled/2', engine: 'surface', height: 1, weight: 0 });
+  assert.ok(quality(filled).metrics.scatter < 0.5, JSON.stringify(quality(filled).metrics));
+  assert.ok(quality(filled).score >= quality(bare).score - 0.05);
+});
