@@ -161,18 +161,25 @@ cluster's first cell) behind and after the text. The plan sets aside texture
 room before any paint: a tail of 6–16 cells past a line's last reservation
 (never on the input line, after a split, or where an elbow or step leaves), and
 a strip row above or below the text when the height budget has a row to spare.
-Each prompt has one idea, chosen from the ornament stream: a texture kind
-(surface leans on ridge, automaton, and dissolve; prompt on wave, truchet, and
-maze) shared by its leaders, tails, strip, and accent, or for weight below 0.25
-a single quiet rhythm. A bed (a truecolor gradient plate whose left edge
-dithers out of the terminal, hugging the text and glowing into command entry or
-ending a few cells past the text in a dithered edge) is then the idea, and
-other canvases keep the rhythm; a bed and a strip never share a prompt. Elbows,
-steps, and rails carry a gradient toward command entry. The right accent (6–12
-cells, `design.rightRuns`, one ink per run) is proposed for about three in ten
-prompts. Any nonzero weight affords one gesture; weight 0 stays bare. Texture
-inks are literal colors from `raster.palette`, so explorer color rerolls change
-them while geometry holds.
+Each prompt has one idea, chosen from the ornament stream: a pair of a kind that
+holds up in one row (surface: ridge, dissolve, a half-block automaton slice;
+prompt: maze, ridge, dissolve) and a kind for a texture two rows tall (a truchet
+meander, a gradient band, an automaton). Braille waves and sprigs read as grit
+at prompt scale, one-row truchet as fragments, and a one-row gradient tail as a
+slab, so none are used. Texture stays outside related text: a tail, or a leader
+into command entry; a gap between clusters of one line keeps a quiet rhythm. A
+strip beside a textured canvas is the same texture two rows tall, so a strip
+and a tail read as one gesture. Below weight 0.25 the idea is a single quiet
+rhythm. Complexity becomes texture detail, never extra cells. A bed (a
+truecolor gradient plate whose left edge dithers out of the terminal, hugging
+the text and glowing into command entry or ending a few cells past the text in
+a dithered edge) is then the idea, and other canvases keep the rhythm; a bed
+and a strip never share a prompt. Elbows, steps, and rails carry a gradient
+toward command entry. The right accent (6–12 cells of a solid kind,
+`design.rightRuns`, one ink per run) is proposed for about one prompt in ten
+and never beside a strip. Any nonzero weight affords one gesture; weight 0
+stays bare. Texture inks are literal colors from `raster.palette`, so explorer
+color rerolls change them while geometry holds.
 
 Assembly and network bands are one-line plans from the same composer. Their
 extent is exact. Inside the art the marker moves to the input row, and the last
