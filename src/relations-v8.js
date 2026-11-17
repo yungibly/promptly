@@ -231,7 +231,8 @@ export function proposeCompact(plan, config) {
     if (kind) add({ level: 'link', target: `leader:${id}`, cluster: id, op: 'leader', kind, cells: 0, fill: 0, edge: kind === 'follow' ? 1 : 3 }, kind === 'follow' ? (path ? 2 : 1) : path ? 0.6 : 0.25);
   }
   for (const tail of plan.tails.filter(Boolean)) add({ level: 'link', target: `tail:${tail.cluster}`, cluster: tail.cluster, op: 'tail', cells: 0, fill: 0, edge: Math.ceil(tail.length / 4) }, 0.45);
-  if (plan.strip) add({ level: 'row', target: 'strip', op: 'strip', cells: 0, fill: 0, edge: Math.ceil(plan.strip.width / 4) }, 0.25 + weight * 0.45);
+  // Line work uses a spare row more readily: beside a tail it is a meander.
+  if (plan.strip) add({ level: 'row', target: 'strip', op: 'strip', cells: 0, fill: 0, edge: Math.ceil(plan.strip.width / 4) }, (lineWork ? 0.5 : 0.25) + weight * 0.45);
   // A right-prompt accent is occasional; on every prompt it became a habit,
   // and at wide widths a far accent beside a quiet prompt read as confetti.
   if (!config.band && weight >= 0.25 && rng.chance(0.12)) add({ level: 'right', target: 'accent', op: 'accent', cells: 0, fill: 0, edge: 2 }, weight * 0.3);
@@ -291,18 +292,25 @@ export function composeRelationsV8(config) {
   // and the right accent. Ornament chooses it, so geometry never depends on it.
   const quiet = weight < 0.25;
   // Surface leans on filled material, prompt on line work. An idea is a pair:
-  // a kind that holds up in one row (ridge, dissolve, a half-block automaton
-  // slice, maze) and the kind for a texture two rows tall, where a truchet
-  // meander or a gradient band reads cleanly. Braille waves and sprigs read as
-  // grit at this scale, one-row truchet as fragments, a gradient tail as a slab.
+  // a kind that holds up in one row and the kind for a texture two rows tall,
+  // where a truchet meander or a gradient band reads cleanly. Prompt spreads
+  // its line work across a gapless chain, a single-strand wave, a vine, and
+  // maze (at most a fifth, so slashes never become the look); its two-row
+  // texture is a meander. Gradient tails and bands read as slabs beside line
+  // work, so on prompt gradients stay beds.
   const [idea, tall] = quiet ? [null, null] : ornament.pick(config.engine === 'prompt'
-    ? [['maze', 'maze'], ['maze', 'truchet'], ['ridge', 'truchet'], ['dissolve', 'maze'], ['maze', 'gradient']]
-    : [['ridge', 'ridge'], ['dissolve', 'dissolve'], ['automaton', 'automaton'], ['ridge', 'gradient'], ['dissolve', 'automaton'], ['automaton', 'gradient']]);
+    ? [['maze', 'truchet'], ['maze', 'maze'], ['wave', 'truchet'], ['wave', 'truchet'], ['truchet', 'truchet'],
+      ['truchet', 'truchet'], ['sprig', 'truchet'], ['ridge', 'truchet'], ['dissolve', 'truchet']]
+    : [['ridge', 'ridge'], ['dissolve', 'dissolve'], ['automaton', 'automaton'], ['ridge', 'gradient'], ['dissolve', 'automaton'], ['ridge', 'automaton'], ['dissolve', 'gradient']]);
   // Complexity adds texture detail without adding cells.
   const detail = Math.min(1, Math.max(0, ((config.complexity ?? 3) - 1) / 9));
   const beat = rhythm(ornament.pick(rhythmKinds.filter((kind) => !['wave', 'chain'].includes(kind))), fork('rhythm'), { colors, ascii });
   // A gradient is brightest at its anchor; other kinds fill their canvas.
-  const strip = (key, width, { anchor } = {}) => texture(idea, fork(key), { width, rows: 1, colors, ascii, detail, ...(idea === 'gradient' ? { anchor } : {}) })[0];
+  // Automaton slices are blocky; set them back toward the ground so the
+  // pixels read as texture beside the text rather than as a second subject.
+  const soften = (kind, rows) => kind !== 'automaton' ? rows : rows.map((line) => line.map((cell) => cell && {
+    ...cell, ...(cell.fg ? { fg: mix(cell.fg, colors.ground, 0.4) } : {}), ...(cell.bg ? { bg: mix(cell.bg, colors.ground, 0.4) } : {}) }));
+  const strip = (key, width, { anchor } = {}) => soften(idea, texture(idea, fork(key), { width, rows: 1, colors, ascii, detail, ...(idea === 'gradient' ? { anchor } : {}) }))[0];
   const rhythmCells = (width) => Array.from({ length: width }, (_, x) => { const glyphs = [...beat.text], ch = glyphs[x % glyphs.length]; return ch === ' ' ? null : { ch, fg: beat.ink }; });
   // Lines carry a gradient toward command entry rather than one flat ink.
   const glow = ramp([mix(colors.quiet, colors.ground, 0.2), colors.stops.at(-1)], 6);
@@ -327,7 +335,7 @@ export function composeRelationsV8(config) {
     const host = plan.clusters[near.clusters.at(-1)];
     if (textured(host) && near.clusters.length === 1) {
       const span = host.width + (byTarget.has(`tail:${host.id}`) ? plan.tails[host.line].length : 0);
-      const grid = texture(tall, fork('pair'), { width: span, rows: 2, colors, ascii, detail });
+      const grid = soften(tall, texture(tall, fork('pair'), { width: span, rows: 2, colors, ascii, detail }));
       twin = { host: host.id, x: host.x, strip: grid[below ? 1 : 0], canvas: grid[below ? 0 : 1] };
     }
   }
@@ -475,7 +483,8 @@ export function composeRelationsV8(config) {
   if (byTarget.has('accent')) {
     const width = ornament.int(6, 12);
     // Only solid kinds: a lone braille accent at the far edge read as noise.
-    const cells = texture(idea && !bedded ? idea : 'gradient', fork('accent'), { width, rows: 1, colors, ascii, detail, anchor: width - 1 })[0];
+    const solid = ['ridge', 'dissolve', 'maze'].includes(idea) && !bedded ? idea : 'gradient';
+    const cells = texture(solid, fork('accent'), { width, rows: 1, colors, ascii, detail, anchor: width - 1 })[0];
     for (const cell of cells) {
       const glyph = !cell ? ' ' : cell.ch === ' ' ? (ascii ? '#' : '█') : cell.ch, color = cell ? cell.fg ?? cell.bg : null;
       if (rightRuns.length && (color === null || rightRuns.at(-1).ink === color)) rightRuns.at(-1).text += glyph;

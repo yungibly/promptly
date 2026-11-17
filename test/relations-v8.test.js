@@ -81,6 +81,7 @@ test('repairs stay within the height budget and band leaders move with their ban
 
 test('compact prompts carry one textured idea, outside related text, rather than bare text', () => {
   let empty = 0, textured = 0, accents = 0;
+  const ideas = { surface: {}, prompt: {} };
   const n = 240;
   for (let i = 0; i < n; i++) {
     const design = compact(`v8-texture/${i}`);
@@ -88,11 +89,10 @@ test('compact prompts carry one textured idea, outside related text, rather than
     const ops = new Set(derivation.accepted.map((p) => p.op));
     const canvases = paint.map((p) => p.canvas).filter(Boolean);
     // One idea: a one-row kind, its two-row partner where a strip joins a
-    // tail, a bed, elbows, and quiet rhythms. Braille grit stays out, and
-    // truchet meanders only appear two rows tall.
+    // tail, a bed, elbows, and quiet rhythms. Surface keeps to filled material.
     assert.ok(canvases.every((kind) => ['bed', 'elbow', 'rhythm', traits.idea, traits.tall].includes(kind)), `${design.seed}: ${canvases}`);
-    assert.ok(!canvases.some((kind) => ['wave', 'sprig'].includes(kind)) && !['wave', 'sprig', 'truchet'].includes(traits.idea), design.seed);
-    for (const p of paint) if (p.canvas === 'truchet') assert.ok(ops.has('strip') && derivation.strip, `${design.seed}: truchet in one row`);
+    if (design.engine === 'surface') assert.ok(!['wave', 'sprig', 'truchet', 'maze', 'gradient'].includes(traits.idea), `${design.seed}: line work on surface`);
+    if (traits.idea !== 'rhythm') ideas[design.engine][traits.idea] = (ideas[design.engine][traits.idea] ?? 0) + 1;
     // Texture never sits between clusters of one line.
     for (const line of derivation.lines) for (const id of line.clusters.slice(0, -1)) {
       assert.ok([null, 'rhythm', 'bed'].includes(paint[id].canvas), `${design.seed}: texture between related text`);
@@ -109,6 +109,12 @@ test('compact prompts carry one textured idea, outside related text, rather than
   assert.ok(empty < n * 0.05, `${empty} prompts without any deliberate idea`);
   assert.ok(textured > n * 0.6, `${textured} textured prompts`);
   assert.ok(accents > 0 && accents < n * 0.15, `${accents} accents`);
+  // No single kind becomes the look of an engine.
+  for (const [engine, counts] of Object.entries(ideas)) {
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    assert.ok(Object.keys(counts).length >= (engine === 'prompt' ? 5 : 3) && Math.max(...Object.values(counts)) < total * (engine === 'prompt' ? 0.35 : 0.5), `${engine}: ${JSON.stringify(counts)}`);
+    if (engine === 'prompt') assert.ok((counts.maze ?? 0) < total * 0.3, `prompt maze ${JSON.stringify(counts)}`);
+  }
 });
 
 test('weight, ornament, and color never move a version-8 field or the input anchor', () => {
