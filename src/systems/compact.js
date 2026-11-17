@@ -98,7 +98,7 @@ export function compact(config, name, { kinds, art = texture, bed = false, arran
   // art or the marker (its glyph is detail), or carries the bed's color.
   const bedInk = arrangement === 'bed' ? text.at(-1).ink : null;
   const leader = bedInk ? { text: ' ', ink: { fg: 'contrast', bg: bedInk.bg } }
-    : detail.chance(0.8) ? rhythm(detail.pick(['dots', 'dashes', 'beads', 'ticks']), detail, { colors, ascii }) : { text: ' ', ink: 0 };
+    : detail.chance(0.8) ? rhythm(detail.pick(['dots', 'dashes', 'beads', 'dots']), detail, { colors, ascii }) : { text: ' ', ink: 0 };
   paint(scene, text, undefined, leader);
   const cursor = marker(scene, last, markerX, detail);
   return {
