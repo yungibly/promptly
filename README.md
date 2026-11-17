@@ -121,7 +121,9 @@ rows and up they keep their larger forms:
   topographic contours ringing the text on a plateau.
 - `--engine automaton`: cellular automaton strips seeded from the label; tall:
   runs falling from the text or rising from the input marker.
-- `--engine growth`: braille vines and coral rooted at the text.
+- `--engine growth`: a braille vine rooted beside or above the text; tall:
+  branches from the input marker or the text, or half-block coral rising from
+  the ground toward the text.
 - `--engine plot`: a single gradient wave trace or Lissajous loop; tall:
   hidden-line ridgelines, harmonographs, and oscilloscope traces.
 

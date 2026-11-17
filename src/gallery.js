@@ -88,7 +88,9 @@ export function gallery(options, count) {
     for (const candidate of candidates) candidate.distance = Math.min(candidate.distance, distance(candidate.vector, latest));
     const engineCounts = Object.fromEntries(candidates.map(({ design }) => [design.engine, chosen.filter((item) => item.design.engine === design.engine).length]));
     const leastRepresented = Math.min(...Object.values(engineCounts));
-    const roomForTall = chosen.filter(tall).length < tallQuota;
+    // Families that only come tall keep a reserved place until they appear.
+    const reserved = [...onlyTall].filter((engine) => engineCounts[engine] === 0).length;
+    const roomForTall = chosen.filter(tall).length + reserved < tallQuota;
     candidates.sort((a, b) => b.distance - a.distance);
     const due = ({ design }) => engineCounts[design.engine] === leastRepresented;
     let index = candidates.findIndex((item) => due(item) && (roomForTall || !tall(item) || (onlyTall.has(item.design.engine) && !engineCounts[item.design.engine])));

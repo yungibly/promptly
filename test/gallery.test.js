@@ -55,7 +55,7 @@ test('filled surfaces and thin strokes remain distinct at the same occupied coor
 });
 
 test('default galleries show every family while tall specimens keep to their share', () => {
-  for (const seed of ['possibility', 'gallery-share']) {
+  for (const seed of ['possibility', 'gallery-share', 'review/7']) {
     const designs = gallery({ seed }, 12);
     assert.deepEqual(new Set(designs.map((d) => d.engine)), new Set(Object.keys(engines)));
     // Automatic version-8 rolls are mostly one to three rows; distance alone
