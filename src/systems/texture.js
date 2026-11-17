@@ -77,12 +77,15 @@ const kinds = {
     const inks = ramp(bright(colors), steps(width)), cells = grid(width, rows);
     const put = (x, y, ch) => { if (x < width && cells[y]) cells[y][x] = { ch, fg: along(inks, x, width) }; };
     if (rows === 1) {
+      // Caps and cups mostly alternate, so the chain reads as one squiggle.
+      let cap = rng.chance(0.5);
       for (let x = 0; x < width;) {
-        const run = rng.int(0, 2), cap = rng.chance(0.5);
+        const run = rng.int(0, 2);
         put(x, 0, cap ? '╭' : '╰');
         for (let i = 1; i <= run; i++) put(x + i, 0, '─');
         put(x + run + 1, 0, cap ? '╮' : '╯');
-        x += run + 2 + (rng.chance(0.25) ? 1 : 0);
+        x += run + 2 + (rng.chance(0.1) ? 1 : 0);
+        if (rng.chance(0.8)) cap = !cap;
       }
       return cells;
     }
