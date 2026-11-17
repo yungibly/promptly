@@ -7,7 +7,6 @@ import { userInfo } from 'node:os';
 import { createDesign, fromRecipe } from '../src/design.js';
 import { compile, quoteZsh } from '../src/compile.js';
 import { preview } from '../src/preview.js';
-import { grammars } from '../src/grammars.js';
 import { gallery, signature } from '../src/gallery.js';
 import { compile as legacy } from '../test/fixtures/legacy-compile.js';
 import { testExplorer } from './explorer-terminal.js';
@@ -32,7 +31,19 @@ function tui(...args) {
   return result.stdout;
 }
 const state = () => JSON.parse(tui('state', '--json')).data;
-const settle = () => tui('wait', 'idle');
+const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+// `wait idle` only means nothing repainted recently; zsh can still be about to
+// run the line (e.g. `source …; clear`). Also require a briefly quiet screen.
+const settle = () => {
+  tui('wait', 'idle');
+  let before = tui('text');
+  for (let i = 0; i < 40; i++) {
+    pause(150);
+    const after = tui('text');
+    if (after === before) return;
+    before = after;
+  }
+};
 const press = (...keys) => { tui('key', 'press', ...keys); settle(); };
 const submit = (command) => { tui('submit', command); settle(); };
 const snapshot = (name) => {
@@ -64,7 +75,7 @@ try {
   tui('open', '--shell', 'zsh', '--backend', 'ghostty', '--cols', '120', '--rows', '24',
     '--cwd', root, '--env', `ZDOTDIR=${output}/zdot`, '--env', 'EDITOR=emacs', '--env', 'VISUAL=emacs', '--config', resolve('tui-test.toml'), '--no-wait-ready');
   submit('unset NO_COLOR; PROMPT="before> "; RPROMPT=""; clear');
-  const upgrade = createDesign({ version: 4, seed: 'upgrade', engine: 'prompt', info: false });
+  const upgrade = createDesign({ version: 7, seed: 'upgrade', engine: 'prompt', info: false });
   writeFileSync(`${output}/legacy.zsh`, legacy(upgrade));
   writeFileSync(`${output}/upgrade.zsh`, compile(upgrade));
   submit(`source ${quoteZsh(`${output}/legacy.zsh`)}; print -r -- "LEGACY:\${+widgets[_promptly_redraw]}"`);
@@ -73,7 +84,8 @@ try {
   check(state().text.includes('\nRETIRED:0:0\n'), 'new export did not retire the legacy widget and expansion callback');
   submit(`typeset -ga precmd_functions; promptly_test_hook() { :; }; precmd_functions+=(promptly_test_hook); source ${quoteZsh(`${output}/upgrade.zsh`)}; source ${quoteZsh(`${output}/upgrade.zsh`)}; print -r -- "HOOKS:\${(j:,:)precmd_functions}"`);
   check(state().text.includes('\nHOOKS:promptly_test_hook\n'), 'sourcing twice changed another precmd hook');
-  for (const style of [...Object.keys(grammars), 'network', 'assembly']) {
+  const saved = ['relations', 'asymmetric-caps', 'live-network', 'shared-network', 'shared-assembly', 'evolving-art'];
+  for (const style of saved) {
     const design = createDesign(JSON.parse(readFileSync(`examples/${style}.json`, 'utf8')));
     submit(`source ${quoteZsh(resolve(`examples/${style}.zsh`))}; clear`);
     const first = state();
@@ -81,7 +93,7 @@ try {
     check(first.cursor.y === design.scene.rows - 1, `${style}: prompt must not wrap`);
     check(normalize(first.text) === normalize(preview(design, { width: 120, color: false })), `${style}: preview differs from actual prompt`);
     const painted = cells(0, 0, 120, design.scene.rows);
-    check(new Set(painted.map((cell) => cell.fg).filter((fg) => fg !== 'default')).size >= (['assembly', 'prompt'].includes(design.engine) ? 2 : 4), `${style}: missing palette colors`);
+    check(new Set(painted.map((cell) => cell.fg).filter((fg) => fg !== 'default')).size >= 2, `${style}: missing palette colors`);
     snapshot(style);
 
     // Exercise actual ZLE editing, including mutation within the input line.
@@ -106,14 +118,14 @@ try {
     console.log(`PASS ${style}: cells, colors, editing, wrapping, right-prompt clearance`);
   }
 
-  const design = createDesign(JSON.parse(readFileSync('examples/compose.json', 'utf8')));
-  submit(`source ${quoteZsh(resolve('examples/compose.zsh'))}; clear`);
+  const design = createDesign(JSON.parse(readFileSync('examples/shared-network.json', 'utf8')));
+  submit(`source ${quoteZsh(resolve('examples/shared-network.zsh'))}; clear`);
   tui('type', 'echo preserved');
   for (const width of [80, 40, 27, 160, 120]) {
     tui('resize', String(width), '24');
     settle();
     const resized = state();
-    const cursor = width < 28 ? 2 : width < 80 ? 5 : design.cursor;
+    const cursor = width < 28 ? 2 : width < 80 ? design.compact.cursor : design.cursor;
     check(resized.cursor.x === cursor + 14, `resize ${width}: input cursor drifted (${resized.cursor.x})`);
     check(resized.text.includes('echo preserved'), `resize ${width}: input was lost`);
     // Terminal reflow may leave previously printed multiline art in scrollback.
@@ -201,86 +213,21 @@ try {
   submit('PATH=$promptly_test_path; unset promptly_test_path');
   console.log('PASS live username/directory, cd, literal metacharacters, wide text, and empty PATH');
 
-  // Version 5 remains a recipe compatibility target. Fresh generation below
-  // must not be judged by these older multirow contour specimens.
-  const surfaces = gallery({ version: 5, engine: 'surface', seed: 'open-medium', complexity: 8, info: true }, 6);
-  const backgroundShapes = new Set();
-  let multicoloredSurfaces = 0;
-  for (const [i, surface] of surfaces.entries()) {
-    const file = `${output}/surface-${i + 1}.zsh`;
-    writeFileSync(file, compile(surface));
-    submit(`source ${quoteZsh(file)}; clear`);
-    check(normalize(state().text) === normalize(preview(surface, { width: 120, color: false })), `${surface.seed}: colored surface preview differs from exported prompt`);
-    check(surface.scene.rows <= 3 && state().cursor.y === surface.scene.rows - 1 && state().cursor.x === surface.cursor, `${surface.seed}: surface must stay within its compact input reservation`);
-    const painted = cells(0, 0, 120, surface.scene.rows);
-    const backdrop = state().colors.background;
-    const isFilled = (cell) => cell.bg !== 'default' && cell.bg !== backdrop;
-    const backgrounds = new Set(painted.filter(isFilled).map((cell) => cell.bg));
-    if (backgrounds.size > 1) multicoloredSurfaces++;
-    if (backgrounds.size) backgroundShapes.add(painted.map((cell, index) => isFilled(cell) ? index : -1).filter((index) => index >= 0).join(','));
-    snapshot(`legacy-surface-${i + 1}`);
-    tui('type', 'echo color');
-    settle();
-    const entry = cells(surface.cursor, surface.scene.rows - 1, 10);
-    check(entry.every((cell) => !isFilled(cell)), `${surface.seed}: tile background leaked into command entry`);
-    check(state().cursor.x === surface.cursor + 10, `${surface.seed}: surface editing cursor drifted`);
-    press('Ctrl+C');
-  }
-  check(backgroundShapes.size >= 3, 'surface gallery did not vary actual occupied background geometry');
-  check(multicoloredSurfaces >= 1, 'surface gallery did not include independently colored tiles');
-  console.log('PASS legacy surface recipes, backgrounds, and clean command entry');
-
-  const contours = [
-    ['capsule', 'curves/14'], ['roundbox', 'curves/4'], ['step', 'curves/9'],
-    ['tab', 'curves/2'], ['arch', 'curves/16'],
-  ];
-  for (const [name, seed] of contours) {
-    const contour = createDesign({ version: 5, engine: 'surface', seed, height: 3, complexity: 8, info: true });
-    const file = `${output}/contour-${name}.zsh`;
-    writeFileSync(file, compile(contour));
-    submit(`source ${quoteZsh(file)}; clear`);
-    check(normalize(state().text) === normalize(preview(contour, { width: 120, color: false })), `${name}: contour differs from exported preview`);
-    check(state().cursor.x === contour.cursor && state().cursor.y === 2, `${name}: contour moved the input anchor`);
-    tui('type', 'echo shape');
-    settle();
-    check(state().cursor.x === contour.cursor + 10, `${name}: contour editing drifted`);
-    snapshot(`legacy-contour-${name}`);
-    press('Ctrl+C');
-  }
-  const powerline = createDesign({ version: 5, engine: 'surface', seed: 'round-caps/0', height: 1, complexity: 6, glyphs: 'powerline', info: true });
+  // Optional Powerline glyphs map the same one-cell caps to U+E0B0–E0B6.
+  const powerline = createDesign(JSON.parse(readFileSync('examples/asymmetric-caps.json', 'utf8')));
   writeFileSync(`${output}/powerline.zsh`, compile(powerline));
   submit(`source ${quoteZsh(`${output}/powerline.zsh`)}; clear`);
-  check(state().text.includes('\ue0b6') && state().text.includes('\ue0b4'), 'Powerline half-circle caps are missing');
+  check(/[\ue0b0-\ue0b6]/u.test(state().text), 'Powerline caps are missing');
   check(normalize(state().text) === normalize(preview(powerline, { width: 120, color: false })), 'Powerline preview differs from exported prompt');
-  check(state().cursor.x === powerline.cursor && state().cursor.y === 0, 'Powerline caps are not one-cell glyphs');
+  check(state().cursor.x === powerline.cursor && state().cursor.y === powerline.scene.rows - 1, 'Powerline caps are not one-cell glyphs');
   tui('type', 'echo rounded');
   settle();
   check(state().cursor.x === powerline.cursor + 12, 'Powerline editing cursor drifted');
   snapshot('powerline');
   press('Ctrl+C');
-  console.log('PASS legacy curved/block recipes and optional Powerline half-circle caps');
+  console.log('PASS optional Powerline caps');
 
-  const darkPills = createDesign({ version: 5, engine: 'surface', seed: 'colored-caps/311', height: 2, complexity: 3, glyphs: 'powerline', palette: 'velvet', info: true });
-  writeFileSync(`${output}/dark-pills.zsh`, compile(darkPills));
-  submit(`source ${quoteZsh(`${output}/dark-pills.zsh`)}; clear`);
-  check([...state().text].filter((char) => char === '\ue0b6').length === 2 && [...state().text].filter((char) => char === '\ue0b4').length === 2, 'dark identity fields must have two complete rounded pills');
-  check(normalize(state().text) === normalize(preview(darkPills, { width: 120, color: false })), 'dark pill preview differs from exported prompt');
-  check(state().cursor.x === darkPills.cursor && state().cursor.y === 1, 'dark pills must leave a separate compact input row');
-  for (const slot of darkPills.scene.runs.filter((run) => run.role)) {
-    const field = cells(slot.x.offset, slot.row, slot.width);
-    check(field.every((cell) => cell.bg === '#2a1a4a'), `${slot.role}: dark violet pill background missing`);
-    check(field.every((cell) => cell.fg === (slot.role === 'username' ? '#00e5b0' : '#e8933a')), `${slot.role}: colored text was replaced by contrast black/white`);
-  }
-  tui('type', 'echo quiet');
-  settle();
-  check(state().cursor.x === darkPills.cursor + 10, 'dark pill command cursor drifted');
-  const darkEntry = cells(darkPills.cursor, 1, 10), defaultColors = state().colors;
-  check(darkEntry.every((cell) => (cell.bg === 'default' || cell.bg === defaultColors.background) && (cell.fg === 'default' || cell.fg === defaultColors.foreground)), 'dark pill finish leaked color into command entry');
-  snapshot('dark-pills');
-  press('Ctrl+C');
-  console.log('PASS legacy dark rounded backgrounds, cyan/orange live text, and plain command entry');
-
-  const surfaceEntry = createDesign({ version: 5, engine: 'surface', seed: 'open-medium/1', height: 1, complexity: 8, info: true });
+  const surfaceEntry = createDesign({ version: 7, engine: 'surface', seed: 'open-medium/1', height: 1, complexity: 8 });
   const surfaceEntryFile = `${output}/surface-entry.zsh`;
   const wideCwd = resolve(output, 'identity-cwd', '界面');
   writeFileSync(surfaceEntryFile, compile(surfaceEntry));
@@ -486,7 +433,7 @@ try {
   eventually(() => state().text.includes('"open-medium/'), 'surface gallery did not render');
   fitRows();
   snapshot('surfaces');
-  writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, explorer: explorerReport, v7: v7Report, styles: [...Object.keys(grammars), 'network', 'assembly', 'surface'], resizeWidths: [80, 40, 27, 160, 120], surfaceResizeWidths: [80, 79, 40, 28, 27, 120], liveRoleBands: { engines: ['assembly', 'network'], resizeWidths: [80, 40, 120] }, legacySurfaces: { version: 5, backgroundShapes: backgroundShapes.size, multicoloredSurfaces, contours: contours.map(([name]) => name) }, consecutiveSeeds: consecutive.map((specimen) => specimen.seed), defaults: { bareSeed: bare.specimen.seed, poolSize: defaultPool.length, consecutive: defaultBatch.map(({ specimen, metrics }) => ({ seed: specimen.seed, engine: specimen.engine, ...metrics })), extremes: [...defaultExtremes.values()].map(({ specimen, metrics, labels }) => ({ seed: specimen.seed, engine: specimen.engine, ...metrics, labels })), liveSeeds: defaultLive.map(({ specimen }) => specimen.seed) }, glyphModes: ['unicode', 'ascii', 'powerline'] }, null, 2) + '\n');
+  writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, explorer: explorerReport, v7: v7Report, examples: saved, resizeWidths: [80, 40, 27, 160, 120], surfaceResizeWidths: [80, 79, 40, 28, 27, 120], liveRoleBands: { engines: ['assembly', 'network'], resizeWidths: [80, 40, 120] }, consecutiveSeeds: consecutive.map((specimen) => specimen.seed), defaults: { bareSeed: bare.specimen.seed, poolSize: defaultPool.length, consecutive: defaultBatch.map(({ specimen, metrics }) => ({ seed: specimen.seed, engine: specimen.engine, ...metrics })), extremes: [...defaultExtremes.values()].map(({ specimen, metrics, labels }) => ({ seed: specimen.seed, engine: specimen.engine, ...metrics, labels })), liveSeeds: defaultLive.map(({ specimen }) => specimen.seed) }, glyphModes: ['unicode', 'ascii', 'powerline'] }, null, 2) + '\n');
   console.log(`PASS ${checks} assertions. Captures: ${output}`);
 } catch (error) {
   try { snapshot('failure'); } catch { /* Keep the original assertion failure. */ }

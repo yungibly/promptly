@@ -82,16 +82,12 @@ test('sampled complexity is frozen in recipes, mutation, and deterministic expor
   }
 });
 
-test('legacy defaults remain level three and explicit invalid complexity is still rejected', () => {
-  for (const style of ['signal', 'reliquary', 'mycelium', 'orrery', 'xenoweave']) {
-    assert.equal(createDesign({ seed: 'legacy-default', style }).complexity, 3);
-    assert.equal(createDesign({ seed: 'legacy-default', style, complexity: 5 }).complexity, 5);
-    assert.throws(() => createDesign({ style, complexity: 6 }), /Complexity/);
+test('retired versions fail clearly and invalid complexity is rejected', () => {
+  for (const version of [1, 2, 3, 4, 5]) {
+    assert.throws(() => createDesign({ version, seed: 'retired' }), /version 1–5/);
+    assert.throws(() => fromRecipe({ version, style: 'compose', seed: 'retired' }), /version 1–5/);
   }
-  for (const [version, engine] of [[2, 'network'], [3, 'assembly'], [4, 'prompt'], [5, 'surface']]) {
-    assert.equal(createDesign({ version, engine, seed: 'saved-default' }).complexity, 3);
-    assert.equal(createDesign({ version, engine, seed: 'saved-default', complexity: 8 }).complexity, 8);
-  }
+  assert.throws(() => createDesign({ style: 'signal' }), /Classic named styles were retired/);
   for (const complexity of [0, 11, -1, 1.5, 'invalid', NaN, Infinity]) assert.throws(() => createDesign({ complexity }), /Complexity/);
 });
 

@@ -80,9 +80,9 @@ test('explicit seed and engine overrides release incompatible saved component st
   assert.equal(network.status, 0, network.stderr);
   assert.equal(JSON.parse(network.stdout).engine, 'network');
   assert.equal(run('inspect', '--from', file, '--engine', 'network', '--fragments', '2').status, 1);
-  const legacy = createDesign({ version: 3, seed: 'old-geometry', engine: 'assembly', height: 6, info: false });
+  const legacy = createDesign({ version: 6, seed: 'old-geometry', engine: 'assembly', height: 6, info: false });
   writeFileSync(file, JSON.stringify(recipe(legacy)));
   const legacyChanged = JSON.parse(run('inspect', '--from', file, '--seed', 'new-legacy').stdout);
-  assert.equal(legacyChanged.version, 3);
+  assert.equal(legacyChanged.version, 6);
   assert.equal(legacyChanged.ornamentSeed, legacy.ornamentSeed);
 });

@@ -2,9 +2,9 @@
 
 This is a generative art project whose medium is a usable zsh prompt. The current
 direction is smaller composable primitives, recursive structure, and broad visual
-possibility. The first version used named alien-themed layouts; those are now
-classic compatibility options. Prefer interoperable geometry and ornament
-operations over more full-prompt templates. Preserve controlled color and negative
+possibility. The classic named layouts and the version 1–5 generators were retired
+in 0.9; saved version 6 and 7 recipes must keep their exact output. Prefer
+interoperable geometry and ornament operations over more full-prompt templates. Preserve controlled color and negative
 space. Git/status/time widgets are outside scope. Docs are for maintainers.
 
 User clarification: connected networks, large freeform art, and compact integrated

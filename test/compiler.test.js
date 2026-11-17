@@ -7,8 +7,9 @@ import { compile } from '../src/compile.js';
 import { compile as legacy } from './fixtures/legacy-compile.js';
 import { Scene, left, right, anchor } from '../src/scene.js';
 
-// The independent renderer oracle covers frozen pre-slot scenes.
-const createDesign = (options) => createCurrentDesign({ version: options.style ? 1 : ({ network: 2, assembly: 3 }[options.engine] ?? 4), engine: options.style ? undefined : options.engine ?? 'prompt', ...options });
+// The independent renderer oracle covers scenes without live slots, so these
+// designs disable live information. Version 7 keeps the fixtures frozen.
+const createDesign = (options) => createCurrentDesign({ version: 7, engine: 'prompt', ...options });
 
 function shell(input, timeout = 120000) {
   const r = spawnSync('zsh', ['-f'], { input, encoding: 'utf8', timeout, maxBuffer: 32 * 1024 * 1024 });
@@ -39,14 +40,13 @@ function rendered(source, widths) {
 test('compiled text preserves every family, wire crossings, clipping, and narrow fallbacks', () => {
   const widths = [1, 2, 3, 10, 27, 28, 29, 40, 79, 80, 81, 82, 99, 100, 120, 137, 201, 511, 999, 1000, 1001, 2000];
   const options = [
-    ...['signal', 'reliquary', 'mycelium', 'orrery', 'xenoweave'].map((style) => ({ style, complexity: 5 })),
-    ...['prompt', 'assembly', 'network'].flatMap((engine) => [1, 10].map((complexity) => ({ engine, complexity }))),
+    ...['surface', 'prompt', 'assembly', 'network'].flatMap((engine) => [1, 10].map((complexity) => ({ engine, complexity }))),
     { engine: 'prompt', seed: 'a4c43e0e', palette: 'ultraviolet', complexity: 3 },
   ];
   for (const config of options) {
     const design = createDesign({ info: false, seed: 'compiler-parity', ...config });
     const before = rendered(legacy(design), widths), after = rendered(compile(design), widths);
-    for (let i = 0; i < widths.length; i++) assert.deepEqual(cells(after[i]), cells(before[i]), `${design.engine ?? design.style}, width ${widths[i]}`);
+    for (let i = 0; i < widths.length; i++) assert.deepEqual(cells(after[i]), cells(before[i]), `${design.engine}, width ${widths[i]}`);
   }
 });
 

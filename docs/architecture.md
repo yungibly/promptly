@@ -25,12 +25,10 @@
 - `src/exploration.js`: deterministic rerolls, local pins, and favorite recipes.
 - `src/explorer.js`: optional terminal UI, native zsh previews, explicit favorites
   persistence, and source export. Cursor controls are confined to this CLI UI.
-- `src/prompt.js` and `src/surface.js`: frozen version-4 compact and version-5
-  surface generators, retained for saved recipes. Their shape catalogues no longer
-  determine fresh compact compositions.
 - `src/role-band.js`: attaches the shared role composer to larger artwork.
-- `src/identity.js`: retains the older identity behavior for compatibility and
-  supplies the narrow fallback.
+- `src/identity.js`: the narrow (28–79 column) live-field fallback.
+- `src/engines.js`: the engine table: row range, sampled footprints, controls,
+  sampling weight, and the first recipe version that samples each engine.
 - `src/chromatic.js`: continuous OKLCH color relationships, gamut mapping, and
   contrast checks. Named color streams are independent of geometry and detail.
 - `src/palettes.js`: seventeen optional named color bookmarks and contrast ink for
@@ -47,7 +45,10 @@
   derivation records each operation's parent, depth, paths, and optional removal.
 - `src/ornaments.js`: tiny expression trees: atom, sequence, enclosure, repetition,
   reflection. Independent alphabets give them character, without prescribing geometry.
-- `src/grammars.js`: registry and the five classic layouts retained for compatibility.
+- `src/grammars.js`: engine builders and the label-only narrow fallback. The
+  classic named layouts and version 1–5 generators were removed in 0.9; their
+  exported `.zsh` files are standalone and still work, but their recipes no
+  longer load.
 - `src/scene.js`: ordered text/fill runs. X coordinates are `(per-mille anchor,
   column offset)`. Rows are discrete. A fill's end is exclusive; text supports
   left/center/right alignment. A wire run connects two affine vertices and carries a

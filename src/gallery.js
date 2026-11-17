@@ -72,7 +72,6 @@ export function signature(input) {
 export function gallery(options, count) {
   const make = (i) => createDesign({ ...options, seed: `${options.seed}/${i + 1}` });
   const first = make(0);
-  if (first.style !== 'compose') return Array.from({ length: count }, (_, i) => i ? make(i) : first);
   const candidates = Array.from({ length: count * 8 }, (_, i) => {
     const design = i ? make(i) : first;
     return { design, vector: signature(design), distance: Infinity };

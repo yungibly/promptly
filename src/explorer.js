@@ -106,7 +106,7 @@ export function explorerFrame(state, view, { columns = 100, rows = 24, color = t
   const fragmentText = fragment ? `Fragment ${fragmentIndex + 1}/${pieces.length}: ${fragment.label}  ${state.pins.fragments.includes(fragment.id) ? '[PINNED]' : '[open]'}${focused ? ' FOCUS' : ''} | ${fragmentBounds(state.current, fragment, width)}` : 'Fragments: select an assembly design to pin individual pieces';
   const favoriteText = state.favorites.length ? `Favorites ${state.favorites.length} | Reference ${favoriteIndex + 1}: ${reference.seed} | Tab switches views` : `Favorites 0 | f keeps a design ${favoritesFile ? 'in your favorites file' : 'for this session'}`;
   const heading = comparison ? `REFERENCE ${favoriteIndex + 1}/${state.favorites.length} | Enter adopts it; e exports CURRENT` : 'CURRENT | Space rolls another design; pinned parts stay';
-  const detail = `${displayed.engine ?? displayed.style} | seed ${displayed.seed} | complexity ${displayed.complexity} | ${displayed.scene.rows} rows`;
+  const detail = `${displayed.engine} | seed ${displayed.seed} | complexity ${displayed.complexity} | ${displayed.scene.rows} rows`;
   const status = view.message || (art.length > visibleRows ? `Preview rows ${scroll + 1}-${Math.min(art.length, scroll + visibleRows)} of ${art.length}; PgUp/PgDn scroll` : out ? `Export destination: ${out}` : 'Export writes sourceable zsh to stdout and closes the explorer.');
   const lines = [line(`PROMPTLY / explore    ${heading}`, '1'), line(detail, '38;2;150;160;180'), ''];
   for (const row of art.slice(scroll, scroll + visibleRows)) lines.push(`  ${row}${color ? '\x1b[0m' : ''}`);

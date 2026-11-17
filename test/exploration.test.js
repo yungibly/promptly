@@ -98,7 +98,7 @@ test('unrestricted rerolls retain every engine and complexity; color-only pin le
 });
 
 test('legacy favorites remain viewable and shape-pinnable without upgrading their recipe', () => {
-  for (const options of [{ version: 6, engine: 'surface' }, { style: 'signal' }]) {
+  for (const options of [{ version: 6, engine: 'surface' }, { version: 6, engine: 'network' }]) {
     const design = createDesign({ ...options, seed: 'older-favorite' });
     const state = pin(pin(createExplorerState({ design }), 'shape'), 'colors');
     const next = explorerAction(state, { type: 'reroll', seed: 'legacy-reroll' });
@@ -114,7 +114,7 @@ test('component-seed validation rejects malformed or misplaced pin data', () => 
   for (const fragmentSeeds of [[], null, { 'piece:-1': 's' }, { 'piece:24': 's' }, { 'piece:0': 2 }]) assert.throws(() => fromRecipe({ ...saved, fragmentSeeds }), /Fragment seeds/);
   assert.throws(() => fromRecipe({ ...saved, engine: 'surface', height: 2 }), /Fragment seeds/);
   for (const field of ['seed', 'complexity', 'height', 'weight', 'info', 'colorSeed', 'colorProgram']) assert.throws(() => fromRecipe({ ...saved, [field]: null }), /recipe|info/i);
-  for (const version of [5, 6, 7]) {
+  for (const version of [6, 7, 8]) {
     const missingInfo = recipe(createDesign({ version, engine: 'surface', seed: 'explicit-info', info: false, label: 'local' }));
     delete missingInfo.info;
     assert.throws(() => fromRecipe(missingInfo), /info is required/);

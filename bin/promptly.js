@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import { createDesign, fromRecipe, mutateDesign, recipe } from '../src/design.js';
 import { compile } from '../src/compile.js';
 import { preview } from '../src/preview.js';
-import { grammars } from '../src/grammars.js';
+import { engines } from '../src/engines.js';
 import { palettes } from '../src/palettes.js';
 import { randomSeed } from '../src/random.js';
 import { materials, alphabets } from '../src/ornaments.js';
@@ -27,10 +27,9 @@ const help = `
   promptly export [options]        Write a standalone, sourceable .zsh prompt
   promptly inspect [options]       Print a recipe, or --program for its derivation
   promptly mutate [options]        Vary a recipe while preserving its art direction
-  promptly styles                 List composition grammars and palettes
+  promptly styles                 List engines, palettes, materials, and alphabets
 
   --seed TEXT                     Repeatable seed; random when omitted
-  --style NAME                    compose (default), or a classic named grammar
   --engine auto|surface|prompt|assembly|network
                                   Mixed exploration by default, or focus one engine
   --palette NAME                  generated (default), or a named color collection
@@ -90,7 +89,7 @@ async function main() {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
-      seed: { type: 'string' }, style: { type: 'string' }, palette: { type: 'string' },
+      seed: { type: 'string' }, palette: { type: 'string' },
       weight: { type: 'string' }, 'color-seed': { type: 'string' },
       complexity: { type: 'string' }, label: { type: 'string' }, glyphs: { type: 'string' },
       material: { type: 'string' }, alphabet: { type: 'string' }, symmetry: { type: 'string' },
@@ -110,11 +109,9 @@ async function main() {
   if (positionals.length > 1) throw new Error('Unexpected positional arguments. See --help.');
   if (command === 'styles') {
     process.stdout.write('\nCOLOR GENERATION\n  generated      Continuous, coherent color relationships (default)\n');
-    for (const [title, items] of [['COMPOSITIONS', grammars], ['PALETTES', palettes]]) {
-      process.stdout.write(`\n${title}\n`);
-      for (const [name, data] of Object.entries(items)) process.stdout.write(`  ${name.padEnd(14)} ${data.description}\n`);
-    }
-    process.stdout.write(`\nENGINES\n  auto (mixed), surface (color and role shapes), prompt (compact), assembly (freeform), network (connected)\n\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
+    process.stdout.write('\nPALETTES\n');
+    for (const [name, data] of Object.entries(palettes)) process.stdout.write(`  ${name.padEnd(14)} ${data.description}\n`);
+    process.stdout.write(`\nENGINES\n  auto (mixed), ${Object.keys(engines).join(', ')}\n\nMATERIALS\n  ${Object.keys(materials).join(', ')}\n\nALPHABETS\n  ${Object.keys(alphabets).join(', ')}\n`);
     return;
   }
   if (!['preview', 'gallery', 'explore', 'export', 'inspect', 'mutate'].includes(command)) throw new Error(`Unknown command: ${command}. See --help.`);
@@ -136,7 +133,7 @@ async function main() {
   const explorerOptions = {};
   if (values.info && values['no-info']) throw new Error('Choose either --info or --no-info.');
   if (values.info || values['no-info']) options.info = explorerOptions.info = !!values.info;
-  for (const key of ['seed', 'style', 'palette', 'complexity', 'label', 'glyphs', 'engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'spread', 'fragments', 'connectivity', 'weight']) {
+  for (const key of ['seed', 'palette', 'complexity', 'label', 'glyphs', 'engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'spread', 'fragments', 'connectivity', 'weight']) {
     if (values[key] !== undefined) options[key] = explorerOptions[key] = values[key];
   }
   if (values['color-seed'] !== undefined) {
@@ -162,7 +159,6 @@ async function main() {
     else process.stdout.write(source);
   } else if (command === 'inspect' || command === 'mutate') {
     const result = command === 'mutate' ? mutateDesign(design, values.variation ?? randomSeed(), values.scope ?? 'all') : design;
-    if (values.program && !result.program) throw new Error('--program requires style compose.');
     const json = JSON.stringify(values.program ? { recipe: recipe(result), ...result.program } : recipe(result), null, 2) + '\n';
     if (values.out) save(values.out, json, values.force);
     else process.stdout.write(json);
