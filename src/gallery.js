@@ -64,7 +64,9 @@ export function gallery(options, count) {
   // Drop each engine's weakest specimens before maximizing variety, so the
   // most distant candidate is not simply the most broken one. Ranking within
   // an engine keeps the engine mix intact.
-  const candidates = Object.values(Object.groupBy(pool, ({ design }) => design.engine)).flatMap((group) => {
+  const groups = new Map();
+  for (const item of pool) groups.set(item.design.engine, [...groups.get(item.design.engine) ?? [], item]);
+  const candidates = [...groups.values()].flatMap((group) => {
     const keep = Math.max(1, Math.ceil(group.length * 0.6));
     return [...group].sort((a, b) => b.score - a.score).slice(0, keep);
   }).sort((a, b) => pool.indexOf(a) - pool.indexOf(b));
