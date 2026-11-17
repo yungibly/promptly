@@ -494,6 +494,17 @@ one-cell halo, and `bed` gives each live field the bed's color under it. At four
 or five rows, horizons and automata stay within about fifty cells; their
 full-width forms need six rows or more.
 
+Username and directory on one row flow as a single `scene.live` run (`stage.js`):
+the path follows the name after one space, and the rest of the fixed reservation
+is a quiet leader (a texture rhythm, chosen by the detail stream) or the bed's
+color. Art starts one cell after the reservation, so it meets the text.
+
+A version-8 network grows in a bounded region: 19–25 of the 41 lattice columns
+(about 45–60% of the width), with unchanged cell spacing. Mirror symmetry
+reflects about the region's center, free ornaments stay inside it, and a role
+band set into the art starts inside it too. Versions 6 and 7 keep the full
+lattice and their exact draws.
+
 ## Version-8 generative systems
 
 A review of 24 uncurated specimens found that large prompts were sums of many

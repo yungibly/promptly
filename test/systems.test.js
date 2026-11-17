@@ -34,7 +34,8 @@ test('live text keeps a clear margin, the input row stays empty, and the cursor 
     for (const width of [80, 121, 240]) {
       const rows = cellsOf(design, width);
       const roles = flatten(design, width).flatMap((spans, row) => spans.filter((s) => s.role).map((s) => ({ row, from: value(s.from, width), to: value(s.to, width) })));
-      assert.equal(roles.length, design.info === false ? 0 : 2, `${engine}/${i}: live roles missing at ${width}`);
+      // Username and directory are two slots, or one live run when they flow.
+      assert.ok(design.info === false ? !roles.length : roles.length >= 1 && roles.length <= 2, `${engine}/${i}: live roles missing at ${width}`);
       for (const role of roles) for (const x of [role.from - 1, role.to]) {
         const cell = rows[role.row][x], bed = typeof rows[role.row][role.from]?.ink === 'object';
         // Neighbors are bare space, other text, or the bed the text sits on;
@@ -81,8 +82,8 @@ test('each system is compact first, keeps its tall forms on request, and reaches
       const big = createDesign({ seed: `system-reach/${engine}/${i}`, engine, height: 4 + i % 5 });
       tall.add(big.program.traits.form ?? big.program.traits.kind ?? big.program.traits.flow);
     }
-    assert.ok(arrangements.size >= 5, `${engine}: ${[...arrangements]}`);
-    assert.ok(kinds.size >= 2 || engine === 'automaton', `${engine}: ${[...kinds]}`);
+    assert.ok(arrangements.size >= 3, `${engine}: ${[...arrangements]}`);
+    assert.ok(kinds.size >= (['automaton', 'growth', 'plot'].includes(engine) ? 1 : 2), `${engine}: ${[...kinds]}`);
     assert.ok(tall.size >= 2 && !tall.has('compact'), `${engine}: ${[...tall]}`);
   }
 });
@@ -97,6 +98,21 @@ test('complexity adds detail to compact art without moving it', () => {
       changed += JSON.stringify(flatten(low, 80)) !== JSON.stringify(flatten(high, 80));
     }
     assert.ok(changed >= 9, `${engine}: complexity changed only ${changed} of 12`);
+  }
+});
+
+test('version-8 networks stay in a bounded region, and a layout pin holds their text', () => {
+  for (let i = 0; i < 24; i++) {
+    const pinned = { seed: `network-region/${i}`, engine: 'network', height: 4 + i % 2, layoutSeed: 'L', roleSeed: 'R', motifSeed: 'M', interactionSeed: 'I' };
+    const a = createDesign({ ...pinned, artSeed: 'first' }), b = createDesign({ ...pinned, artSeed: 'second' });
+    assert.deepEqual(a.program.interactions.placement, b.program.interactions.placement, `network ${i}: layout pin moved the text`);
+    assert.deepEqual(a.program.region, b.program.region);
+    for (const width of [80, 200]) {
+      const limit = Math.ceil(width * 0.62);
+      for (const run of a.scene.runs.filter((run) => run.kind === 'wire')) for (const end of [run.from, run.to]) {
+        assert.ok(value(end.x, width) <= limit, `network ${i}: a wire reaches ${value(end.x, width)} of ${width}`);
+      }
+    }
   }
 });
 

@@ -1,7 +1,7 @@
 import { Scene } from '../scene.js';
 import { random } from '../random.js';
 import { palette, emit, fixed, clamp, occupied } from './raster.js';
-import { texture } from './texture.js';
+import { texture, rhythm } from './texture.js';
 import { roles, line, paint, marker } from './stage.js';
 
 // The primary form of every version-8 system: live text and one bounded
@@ -16,7 +16,9 @@ import { roles, line, paint, marker } from './stage.js';
 //   bed      text on a gradient bed that dissolves past it
 const ARRANGEMENTS = { 1: ['trail', 'trail', 'lead', 'through'], 2: ['beside', 'above', 'above', 'through'], 3: ['beside', 'above', 'through'] };
 
-export function compact(config, name, { kinds, art = texture, bed = false }) {
+// `arrangements` filters the arrangements a system accepts; `fades: false`
+// keeps art whole when holes would break it (continuous lines, single traces).
+export function compact(config, name, { kinds, art = texture, bed = false, arrangements, fades = true }) {
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, `structure:${name}`);
   const layout = random(config.layoutSeed ?? config.seed, `structure:${name}:layout`);
@@ -26,14 +28,15 @@ export function compact(config, name, { kinds, art = texture, bed = false }) {
   const colors = palette(config.colors, material);
   const text = roles(config, layout);
   const scene = new Scene(height, config.glyphs);
-  const choices = [...ARRANGEMENTS[height], ...(bed && height <= 2 ? ['bed'] : [])];
+  const allowed = [...ARRANGEMENTS[height], ...(bed && height <= 2 ? ['bed'] : [])];
+  const choices = arrangements ? allowed.filter((a) => arrangements.includes(a)) : allowed;
   const arrangement = layout.pick(choices);
   const tw = text.reduce((sum, r) => sum + r.width + 2, -2);
   const last = height - 1;
   let box, anchor, fade, markerX, textRow;
   if (arrangement === 'trail') {
     textRow = 0; line(text, 0, 1);
-    box = { x: tw + 3, y: 0, width: clamp(layout.int(8, 16), 6, 44 - tw), rows: 1 };
+    box = { x: tw + 2, y: 0, width: clamp(layout.int(8, 16), 6, 44 - tw), rows: 1 };
     anchor = 0; fade = layout.pick(['none', 'right']); markerX = box.x + box.width + 1;
   } else if (arrangement === 'lead') {
     const width = layout.int(6, 10);
@@ -42,7 +45,7 @@ export function compact(config, name, { kinds, art = texture, bed = false }) {
     anchor = width - 1; fade = layout.pick(['none', 'left']); markerX = width + 2 + tw + 2;
   } else if (arrangement === 'beside') {
     textRow = height === 3 ? layout.int(0, 1) : 0; line(text, textRow, 1);
-    box = { x: tw + 3, y: 0, width: clamp(layout.int(12, 30), 8, 76 - tw), rows: height - 1 };
+    box = { x: tw + 2, y: 0, width: clamp(layout.int(12, 30), 8, 76 - tw), rows: height - 1 };
     anchor = 0; fade = layout.pick(['none', 'right', 'right']); markerX = layout.pick([0, 1]);
   } else if (arrangement === 'above') {
     textRow = last; line(text, last, 1);
@@ -65,7 +68,7 @@ export function compact(config, name, { kinds, art = texture, bed = false }) {
   // has no anchor: the knocked-out text would hide whatever grew from it.
   const kind = arrangement === 'bed' ? 'gradient' : rng.pick(typeof kinds === 'function' ? kinds(box.rows) : kinds);
   if (arrangement === 'through') anchor = undefined;
-  if (kind === 'dissolve') fade = 'none';
+  if (kind === 'dissolve' || !fades) fade = 'none';
   // Complexity adds detail to the art without changing its box.
   const level = (config.complexity - 1) / 9;
   const halo = (x, y) => box.y + y === textRow && text.some((role) => box.x + x >= role.x - 1 && box.x + x <= role.x + role.width);
@@ -91,7 +94,12 @@ export function compact(config, name, { kinds, art = texture, bed = false }) {
   // On a single row the marker follows both the art and the text.
   if (height === 1) markerX = Math.max(markerX, ...text.map((r) => r.x + r.width + 2));
   emit(scene, cells, fixed(0, box.x), box.y);
-  paint(scene, text);
+  // The flowed text's leftover reservation becomes a quiet leader toward the
+  // art or the marker (its glyph is detail), or carries the bed's color.
+  const bedInk = arrangement === 'bed' ? text.at(-1).ink : null;
+  const leader = bedInk ? { text: ' ', ink: { fg: 'contrast', bg: bedInk.bg } }
+    : detail.chance(0.8) ? rhythm(detail.pick(['dots', 'dashes', 'beads', 'ticks']), detail, { colors, ascii }) : { text: ' ', ink: 0 };
+  paint(scene, text, undefined, leader);
   const cursor = marker(scene, last, markerX, detail);
   return {
     scene, cursor, rightPrompt: '',

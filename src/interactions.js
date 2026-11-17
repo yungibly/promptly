@@ -88,8 +88,12 @@ export function integrateRoleBand(composition, band, config) {
   // Place the text before inspecting available artwork. Regenerating an art
   // fragment can invalidate a route, but cannot move a pinned role or mask.
   const row = embedded ? rng.int(0, finalRow - 1) : finalRow;
-  const start = embedded ? rng.pick([1, 1, 78 - width, rng.int(1, 78 - width)]) : min + offset;
-  const originAt = embedded ? rng.pick([0, 0, 500, 1000]) : 0;
+  // A version-8 network grows in a bounded region from the left; text set
+  // into it stays inside that region rather than across the terminal.
+  const region = latest ? composition.program.region?.cells : undefined;
+  const start = !embedded ? min + offset : region ? rng.pick([1, 1, 2, rng.int(1, Math.max(1, region - width))])
+    : rng.pick([1, 1, 78 - width, rng.int(1, 78 - width)]);
+  const originAt = !embedded ? 0 : region ? (rng.next(), 0) : rng.pick([0, 0, 500, 1000]);
   const shift = start - min;
   const origin = anchor(originAt, shift - Math.floor(originAt * 78 / 1000));
   const translate = (x) => anchor(origin.at, value(x) + origin.offset);

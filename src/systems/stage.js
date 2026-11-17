@@ -32,10 +32,26 @@ export function clearance(list, margin = 1) {
   }));
 }
 
-export function paint(scene, list, at = (role) => left(role.x)) {
+// When username and directory share a row they flow as one live run: the
+// path follows the name after one space, and `pad` (a quiet leader, or the
+// bed's color) fills the rest of the fixed reservation. The art therefore
+// meets the text instead of waiting behind blank reserved cells.
+export function paint(scene, list, at = (role) => left(role.x), pad = { text: ' ', ink: 0 }) {
+  const live = list.filter((role) => role.role !== 'label').sort((a, b) => a.x - b.x);
+  const [first, second] = live;
+  const flows = second && first.row === second.row && second.x > first.x + first.width
+    && second.x - (first.x + first.width) <= 3 && at(first).at === at(second).at;
   for (const role of list) {
     if (role.role === 'label') scene.text(role.row, at(role), role.text, role.ink);
-    else scene.slot(role.row, at(role), role.role, role.width, role.ink);
+    else if (!flows) scene.slot(role.row, at(role), role.role, role.width, role.ink);
+  }
+  if (flows) {
+    const width = second.x + second.width - first.x;
+    scene.live(first.row, at(first), width, [
+      { role: first.role, width: first.width, ink: first.ink },
+      { text: ' ', ink: first.ink },
+      { role: second.role, width: second.width, ink: second.ink },
+    ], pad);
   }
 }
 

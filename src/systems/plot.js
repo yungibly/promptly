@@ -4,7 +4,6 @@ import { ramp, palette, braille, emit, fixed, clamp, smooth, occupied, grid } fr
 import { fbm } from './noise.js';
 import { roles, line, clearance, paint, marker } from './stage.js';
 import { compact } from './compact.js';
-import { texture } from './texture.js';
 
 // Pen plots on the braille lattice: stacked ridgelines with hidden-line
 // occlusion, damped harmonograph orbits around the text, and oscilloscope
@@ -76,15 +75,18 @@ function oscilloscope(rng, { w, h, sub, inks, blocked }) {
 
 export function plot(config) {
   // One to three rows: a braille wave beside the text, or a small harmonograph.
-  // In two rows the harmonograph becomes one closed Lissajous loop: at eight
-  // dots tall, decaying turns would fill the band instead of drawing a line.
-  if (config.height <= 3) return compact(config, 'plot', { kinds: (rows) => rows > 1 ? ['wave', 'lissajous'] : ['wave'], art: (kind, rng, options) => {
-    if (kind !== 'lissajous') return texture(kind, rng, options);
+  // One to three rows: a single clean trace, two dots thick, its ink running
+  // along a gradient; it sits beside or above the text, never cut through.
+  if (config.height <= 3) return compact(config, 'plot', { kinds: ['trace'], arrangements: ['trail', 'beside', 'above'], fades: false, art: (kind, rng, options) => {
     const w = options.width * 2, h = options.rows * 4, sub = grid(w, h);
-    // More detail chooses knottier frequency ratios.
-    const [a, b] = rng.pick(options.detail < 0.5 ? [[1, 2], [1, 3], [2, 1]] : [[2, 3], [3, 4], [3, 2], [3, 5]]), phase = rng.next() * 3.14;
-    const points = Array.from({ length: 400 }, (_, i) => { const t = i / 399 * 6.2832; return [(w - 1) / 2 * (1 + Math.sin(a * t + phase)), (h - 1) / 2 * (1 + Math.sin(b * t))]; });
-    trace(sub, points, (t) => options.colors.stops.at(-1 - Math.floor(t * 2) % 2), () => false);
+    const inks = ramp([options.colors.stops[1], options.colors.stops.at(-1), options.colors.text], 8);
+    const cycles = 0.8 + rng.next() * (1 + options.detail * 2), phase = rng.next() * 6.283, amp = (h - 2) / 2;
+    let last = null;
+    for (let x = 0; x < w; x++) {
+      const y = Math.round((h - 2) / 2 + amp * Math.sin(x / w * cycles * 6.283 + phase));
+      for (let k = Math.min(y, last ?? y); k <= Math.max(y, last ?? y) + 1; k++) sub[clamp(k, 0, h - 1)][x] = inks[Math.min(7, Math.floor(x / w * 8))];
+      last = y;
+    }
     return braille(sub);
   } });
   const seed = config.artSeed ?? config.seed;

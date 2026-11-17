@@ -130,11 +130,13 @@ test('reflection is a geometric transformation of the generated graph', () => {
     if (step.remove) network.remove(step.remove);
     network.add(step.paths);
   }
+  // Version 8 mirrors about the center of the network's bounded region.
+  const axis = ((design.program.region?.columns ?? 41) - 1) / 2;
   const reflected = new Network(41, design.height - 1);
   for (const edge of network.edges.values()) {
-    reflected.add([[edge.a, edge.b], reflect([edge.a, edge.b], 20)]);
+    reflected.add([[edge.a, edge.b], reflect([edge.a, edge.b], axis)]);
   }
-  for (const node of reflected.nodes.values()) assert.ok(reflected.nodes.has(key(p(40 - node.x, node.y))));
+  for (const node of reflected.nodes.values()) assert.ok(reflected.nodes.has(key(p(2 * axis - node.x, node.y))));
   assert.equal(reflected.nodes.size, design.program.stats.vertices);
 });
 

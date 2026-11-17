@@ -3,7 +3,6 @@ import { random } from '../random.js';
 import { ramp, palette, braille, halfBlocks, emit, fixed, clamp, occupied, grid } from './raster.js';
 import { roles, line, paint, marker } from './stage.js';
 import { compact } from './compact.js';
-import { texture } from './texture.js';
 
 // Growth on the braille dot lattice (two by four dots per cell, square in
 // practice). Branches rise from the input marker or the text; frost (diffusion-
@@ -71,15 +70,15 @@ function frost(rng, { w, h, seeds, blocked, particles, stick }) {
 }
 
 export function growth(config) {
-  // One to three rows: a strip of coral, or sprigs where there are two rows.
-  if (config.height <= 3) return compact(config, 'growth', { kinds: (rows) => rows > 1 ? ['sprig', 'sprig', 'coral'] : ['coral'], art: (kind, rng, options) => {
-    if (kind !== 'coral') return texture(kind, rng, options);
-    const w = options.width, h = options.rows * 2, seeds = [];
-    for (let x = rng.int(0, 3); x < w; x += rng.int(3, 7)) seeds.push({ x, y: h - 1 });
-    const dots = frost(rng, { w, h, seeds, blocked: () => false, particles: Math.round(w * h * (0.15 + options.detail * 0.3)), stick: 0.4 + rng.next() * 0.4 });
-    const depth = Math.max(1, ...dots.map((d) => d.depth)), inks = ramp(options.colors.stops, 4), sub = grid(w, h);
-    for (const d of dots) sub[d.y][d.x] = inks[clamp(Math.floor(d.depth / (depth + 1) * 4), 0, 3)];
-    return halfBlocks(sub);
+  // One to three rows: one braille vine rooted beside the text (or above it,
+  // at the text's start or end), crawling along the band and ending in buds.
+  if (config.height <= 3) return compact(config, 'growth', { kinds: ['vine'], arrangements: ['trail', 'beside', 'above'], fades: false, art: (kind, rng, options) => {
+    const w = options.width * 2, h = options.rows * 4, sub = grid(w, h), fromRight = (options.anchor ?? 0) > options.width / 2;
+    const root = { x: fromRight ? w - 2 : 0, y: h - 1, angle: fromRight ? Math.PI + 0.45 : -0.45, length: Math.max(h, w * (0.25 + rng.next() * 0.15)) };
+    const dots = branches(rng, { w, h, roots: [root], blocked: () => false, complexity: 2 + Math.round(options.detail * 6), spread: 0.5 + rng.next() * 0.4, thick: 1 });
+    const depth = Math.max(1, ...dots.map((d) => d.depth)), inks = ramp([options.colors.stops[1], options.colors.stops.at(-1)], 4), bud = options.colors.accents[rng.int(0, 2)];
+    for (const d of dots) if (d.x >= 0 && d.x < w && d.y >= 0 && d.y < h) sub[d.y][d.x] = d.tip ? bud : inks[clamp(Math.floor(d.depth / (depth + 1) * 4), 0, 3)];
+    return braille(sub, (color) => color === bud ? 9 : inks.indexOf(color));
   } });
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, 'structure:growth');
