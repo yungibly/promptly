@@ -2,6 +2,8 @@ import { Scene } from '../scene.js';
 import { random } from '../random.js';
 import { ramp, palette, braille, halfBlocks, emit, fixed, clamp, occupied, grid } from './raster.js';
 import { roles, line, paint, marker } from './stage.js';
+import { compact } from './compact.js';
+import { texture } from './texture.js';
 
 // Growth on the braille dot lattice (two by four dots per cell, square in
 // practice). Branches rise from the input marker or the text; frost (diffusion-
@@ -69,6 +71,16 @@ function frost(rng, { w, h, seeds, blocked, particles, stick }) {
 }
 
 export function growth(config) {
+  // One to three rows: a strip of coral, or sprigs where there are two rows.
+  if (config.height <= 3) return compact(config, 'growth', { kinds: (rows) => rows > 1 ? ['sprig', 'sprig', 'coral'] : ['coral'], art: (kind, rng, options) => {
+    if (kind !== 'coral') return texture(kind, rng, options);
+    const w = options.width, h = options.rows * 2, seeds = [];
+    for (let x = rng.int(0, 3); x < w; x += rng.int(3, 7)) seeds.push({ x, y: h - 1 });
+    const dots = frost(rng, { w, h, seeds, blocked: () => false, particles: Math.round(w * h * (0.15 + options.detail * 0.3)), stick: 0.4 + rng.next() * 0.4 });
+    const depth = Math.max(1, ...dots.map((d) => d.depth)), inks = ramp(options.colors.stops, 4), sub = grid(w, h);
+    for (const d of dots) sub[d.y][d.x] = inks[clamp(Math.floor(d.depth / (depth + 1) * 4), 0, 3)];
+    return halfBlocks(sub);
+  } });
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, 'structure:growth');
   const layout = random(config.layoutSeed ?? config.seed, 'structure:growth:layout');

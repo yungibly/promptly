@@ -338,7 +338,8 @@ try {
   }
   check(['prompt', 'surface', 'network', 'assembly'].every((engine) => defaultPool.some(({ specimen }) => specimen.engine === engine)), 'seed-only default pool lost a procedural family');
   check(Array.from({ length: 10 }, (_, i) => i + 1).every((n) => defaultPool.some(({ metrics }) => metrics.complexity === n)), 'seed-only default pool did not reach every complexity');
-  check(defaultPool.some(({ metrics }) => metrics.rows === 1) && defaultPool.some(({ metrics }) => metrics.rows === 12), 'seed-only defaults did not reach short and tall footprints');
+  // Version 8 is prompt-scale first: defaults span one to five rows; taller art needs --height.
+  check(defaultPool.some(({ metrics }) => metrics.rows === 1) && defaultPool.some(({ metrics }) => metrics.rows >= 4) && defaultPool.every(({ metrics }) => metrics.rows <= 5), 'seed-only defaults left the prompt-scale footprint');
   check(defaultPool.some(({ metrics }) => metrics.weight < 0.05) && defaultPool.some(({ metrics }) => metrics.weight > 0.95), 'seed-only defaults did not reach both weight extremes');
   const exportDefault = (args) => {
     const result = spawnSync(process.execPath, ['bin/promptly.js', ...args], { cwd: root, encoding: 'utf8', timeout: 15000, maxBuffer: 16 * 1024 * 1024 });

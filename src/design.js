@@ -6,7 +6,7 @@ import { materials, alphabets } from './ornaments.js';
 import { compactIdentity } from './identity.js';
 import { withRoleBand } from './role-band.js';
 import { generateColors } from './chromatic.js';
-import { engines, pickEngine } from './engines.js';
+import { engines, pickEngine, footprint } from './engines.js';
 
 export const LATEST = 8;
 // Saved recipes from these versions still load with their exact appearance.
@@ -66,7 +66,7 @@ export function createDesign(options = {}) {
   const symmetry = options.symmetry ?? (random(seed, 'trait:symmetry').chance(engine === 'network' ? 0.3 : 0.15) ? 'mirror' : 'none');
   // Low complexity does not exclude a large footprint, and high complexity does
   // not force one: the row budget has its own stream.
-  const height = Number(options.height ?? random(seed, 'trait:auto-height').pick(engines[engine].heights));
+  const height = Number(options.height ?? random(seed, 'trait:auto-height').pick(footprint(engine, version)));
   const density = Number(options.density ?? (0.3 + random(seed, 'trait:density').next() * 0.35).toFixed(3));
   const ornamentSeed = String(options.ornamentSeed ?? seed);
   if (!Object.hasOwn(materials, material)) throw new Error(`Unknown material: ${material}. Choose ${Object.keys(materials).join(', ')}.`);
@@ -81,7 +81,9 @@ export function createDesign(options = {}) {
   if (!Number.isFinite(weight) || weight < 0 || weight > 1) throw new Error('Weight must be between 0 and 1.');
   config.weight = weight;
   if (engines[engine].controls) {
-    const spread = Number(options.spread ?? (0.2 + random(seed, 'trait:spread').next() * 0.8).toFixed(3));
+    // Version 8 can bound horizontal reach so art stays near the text.
+    const [near, far] = version >= 8 && engines[engine].extent || [0.2, 1];
+    const spread = Number(options.spread ?? (near + random(seed, 'trait:spread').next() * (far - near)).toFixed(3));
     const fragments = Number(options.fragments ?? random(seed, 'trait:fragments').pick(engines[engine].compact ? [1, 2, 3, 4] : [1, 1, 2, 3, 4, 5, 7, 9, 12]));
     const connectionRng = random(seed, 'trait:connectivity');
     const connectivity = Number(options.connectivity ?? (connectionRng.chance(0.7) ? 0 : connectionRng.next().toFixed(3)));

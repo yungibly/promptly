@@ -3,6 +3,8 @@ import { random } from '../random.js';
 import { ramp, palette, braille, emit, fixed, clamp, smooth, occupied, grid } from './raster.js';
 import { fbm } from './noise.js';
 import { roles, line, clearance, paint, marker } from './stage.js';
+import { compact } from './compact.js';
+import { texture } from './texture.js';
 
 // Pen plots on the braille lattice: stacked ridgelines with hidden-line
 // occlusion, damped harmonograph orbits around the text, and oscilloscope
@@ -73,6 +75,18 @@ function oscilloscope(rng, { w, h, sub, inks, blocked }) {
 }
 
 export function plot(config) {
+  // One to three rows: a braille wave beside the text, or a small harmonograph.
+  // In two rows the harmonograph becomes one closed Lissajous loop: at eight
+  // dots tall, decaying turns would fill the band instead of drawing a line.
+  if (config.height <= 3) return compact(config, 'plot', { kinds: (rows) => rows > 1 ? ['wave', 'lissajous'] : ['wave'], art: (kind, rng, options) => {
+    if (kind !== 'lissajous') return texture(kind, rng, options);
+    const w = options.width * 2, h = options.rows * 4, sub = grid(w, h);
+    // More detail chooses knottier frequency ratios.
+    const [a, b] = rng.pick(options.detail < 0.5 ? [[1, 2], [1, 3], [2, 1]] : [[2, 3], [3, 4], [3, 2], [3, 5]]), phase = rng.next() * 3.14;
+    const points = Array.from({ length: 400 }, (_, i) => { const t = i / 399 * 6.2832; return [(w - 1) / 2 * (1 + Math.sin(a * t + phase)), (h - 1) / 2 * (1 + Math.sin(b * t))]; });
+    trace(sub, points, (t) => options.colors.stops.at(-1 - Math.floor(t * 2) % 2), () => false);
+    return braille(sub);
+  } });
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, 'structure:plot');
   const layout = random(config.layoutSeed ?? config.seed, 'structure:plot:layout');
@@ -84,19 +98,9 @@ export function plot(config) {
   const scene = new Scene(height, config.glyphs);
   const textWidth = text.reduce((sum, r) => sum + r.width + 2, -2);
   const inks = ramp(material.chance(0.5) ? colors.stops.slice(1) : [...colors.stops].reverse().slice(0, -1), 6);
-  if (height === 1) {
-    // A trace between the live text and the input marker.
-    const x = line(text, 0, 1) + 2, cols = clamp(layout.int(8, 16), 6, 43 - x);
-    const sub = grid(cols * 2, 4);
-    const traits = oscilloscope(rng, { w: cols * 2, h: 4, sub, inks, blocked: () => false });
-    emit(scene, braille(sub), fixed(0, x));
-    paint(scene, text);
-    const cursor = marker(scene, 0, x + cols + 2, detail);
-    return { scene, cursor, rightPrompt: '', program: { engine: 'plot/1', traits, derivation: { columns: cols }, stats: { occupiedCells: cols } } };
-  }
   const rows = height - 1, inputRow = height - 1;
   // The form decides where the text sits, so it is a layout choice.
-  const form = rows >= 3 ? layout.pick(['ridgelines', 'ridgelines', 'harmonograph', 'oscilloscope']) : 'oscilloscope';
+  const form = layout.pick(['ridgelines', 'ridgelines', 'harmonograph', 'oscilloscope']);
   let cols, place, inside;
   if (form === 'harmonograph') {
     // The orbit is centered on the text, which sits at its quiet middle.

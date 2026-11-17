@@ -24,7 +24,7 @@ test('fresh default sampling reaches the full complexity range in every procedur
     levels[design.engine].add(design.complexity);
     counts[design.complexity]++;
     compactDetailed ||= design.height <= 3 && design.complexity >= 9;
-    tallSimple ||= design.height >= 8 && design.complexity <= 2;
+    tallSimple ||= design.height >= 4 && design.complexity <= 2;
   }
   for (const engine of engines) assert.deepEqual([...levels[engine]].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], engine);
   assert.ok(compactDetailed, 'high detail can have a compact row budget');
@@ -47,7 +47,7 @@ test('explicit modern engines still sample complexity and footprint independentl
       assert.equal(detailed.complexity, 10);
     }
     assert.ok(levels.has(1) && levels.has(10), `${engine}: both complexity extremes`);
-    const expected = [...new Set(table[engine].heights)].sort((a, b) => a - b);
+    const expected = [...new Set(table[engine].footprint)].sort((a, b) => a - b);
     assert.deepEqual([...heights].sort((a, b) => a - b), expected);
   }
 });
