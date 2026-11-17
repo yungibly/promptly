@@ -6,6 +6,7 @@ import { tmpdir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 import { createDesign, recipe, fromRecipe } from '../src/design.js';
+import { engines } from '../src/engines.js';
 import { compile, quoteZsh } from '../src/compile.js';
 import { Scene, left } from '../src/scene.js';
 import { preview } from '../src/preview.js';
@@ -21,15 +22,23 @@ const render = (source, extra = '') => {
 };
 
 test('new designs display live username and directory across every procedural family', () => {
-  for (const engine of ['surface', 'prompt', 'assembly', 'network']) {
-    const design = createDesign({ engine, seed: 'live-roles', height: engine === 'network' ? 4 : 3 });
-    assert.equal(design.info, true);
-    const plain = preview(design, { width: 120, color: false });
-    assert.ok(plain.includes(userInfo().username));
-    assert.ok(plain.includes('promptly'));
-    assert.equal(compile(fromRecipe(recipe(design))), compile(design));
-    const without = createDesign({ ...recipe(design), info: false });
-    assert.ok(!without.scene.runs.some((r) => r.kind === 'slot'));
+  // A short directory named promptly stays visible however the slot truncates.
+  const root = mkdtempSync(join(tmpdir(), 'promptly-roles-'));
+  const cwd = join(root, 'promptly');
+  mkdirSync(cwd);
+  try {
+    for (const [engine, { rows }] of Object.entries(engines)) {
+      const design = createDesign({ engine, seed: 'live-roles', height: Math.max(3, rows[0]) });
+      assert.equal(design.info, true);
+      const plain = preview(design, { width: 120, color: false, cwd });
+      assert.ok(plain.includes(userInfo().username));
+      assert.ok(plain.includes('promptly'));
+      assert.equal(compile(fromRecipe(recipe(design))), compile(design));
+      const without = createDesign({ ...recipe(design), info: false });
+      assert.ok(!without.scene.runs.some((r) => r.kind === 'slot'));
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
 
