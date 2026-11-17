@@ -48,7 +48,8 @@ export function testHugging({ tui, state, check, eventually, snapshot, output, c
     snapshot(`hugging-${leaf === '界面界面' ? 'wide' : leaf.startsWith('d%') ? 'literal' : leaf.length > 1 ? 'long' : 'short'}`);
   }
   check(ends.size >= 2, 'hugging bracket did not move with the directory length');
-  submit('promptly_off; clear');
+  // Later checks run the CLI relative to the repository.
+  submit(`promptly_off; cd ${quoteZsh(process.cwd())}; clear`);
   tui('resize', '120', '24');
   console.log('PASS hugging live fields follow cd while later columns, colors, and command entry stay fixed');
 }
