@@ -32,8 +32,7 @@ function reroll(state, seed) {
   options.seed = seed;
   if (pins.shape && current.version < 7) options.seed = current.seed;
   options.ornamentSeed = local ? current.ornamentSeed : seed;
-  if (current.style !== 'compose' && local || options.style && options.style !== 'compose') delete options.ornamentSeed;
-  if (current.version >= 7 && (local || options.version === undefined || options.version === 7)) {
+  if (current.version >= 7 && (local || options.version === undefined || options.version >= 7)) {
     for (const key of domains) options[key] = seed;
     options.fragmentSeeds = {};
     if (pins.shape) {

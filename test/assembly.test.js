@@ -109,13 +109,3 @@ test('galleries select deterministic geometric variety independently of palette 
   assert.ok(designs.some((d) => d.scene.rows <= 3) && designs.some((d) => d.scene.rows >= 7));
   assert.ok(new Set(designs.map((d) => JSON.stringify(signature(d)))).size === designs.length);
 });
-
-test('version-2 network recipes keep the pre-assembly geometry and derivation', () => {
-  const saved = JSON.parse(readFileSync(new URL('../examples/network.json', import.meta.url)));
-  const design = fromRecipe(saved);
-  assert.equal(design.engine, 'network');
-  assert.equal(design.version, 2);
-  assert.deepEqual(recipe(design), saved);
-  const content = JSON.stringify({ scene: design.scene, cursor: design.cursor, rightPrompt: design.rightPrompt, program: design.program });
-  assert.equal(createHash('sha256').update(content).digest('hex'), 'e5bb58ec491eda1de4f1fd1c28ee6dbb53d786b63f2f17411ace59b2856ff719');
-});

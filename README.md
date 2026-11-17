@@ -22,11 +22,8 @@ color, and detail vary independently. No Git, clocks, network calls, or runtime 
 · [Compact compositions](docs/relations.png)
 · [Horizontal capsules](docs/capsules-v6.png)
 · [Mixed possibilities](docs/possibilities.png)
-· [Role compositions](docs/surfaces.png)
-· [Line-focused prompts](docs/prompts.png)
 · [Freeform compositions](docs/assembly.png)
 · [Connected networks](docs/primitives.png)
-· [Original classic layouts](docs/gallery.png)
 
 ## Install
 
@@ -81,7 +78,7 @@ the previous prompt and prompt expansion options in the current shell.
 Username and directory update through zsh's native prompt expansion. Long values
 truncate inside reserved cells, so they cannot displace the artwork or input.
 `--label TEXT` adds a static inscription. `--no-info` omits live fields;
-`--info` enables them when loading an older recipe.
+`--info` enables them on a recipe saved without them.
 
 ## Explore
 
@@ -125,9 +122,7 @@ compositions remove unused rows; input can follow the last text baseline or begi
 on its own line. Complexity expands the proposal search and small repeated rules
 or joins within the same visual-weight budget, without moving the text roles.
 `--complexity N` fixes the detail level without changing the seed's engine, row
-budget, visual weight, or colors. Saved recipes keep their resolved complexity;
-classic styles and explicitly selected legacy generators retain their level-3
-default when complexity is omitted.
+budget, visual weight, or colors. Saved recipes keep their resolved complexity.
 
 For compact compositions, `--spread` controls the chance of distant information,
 `--fragments` bounds how many role groups can receive separate treatments and
@@ -135,12 +130,11 @@ how many small strokes repeat, and `--connectivity` permits joins and rails.
 `--density 0.15..0.85` controls thin-rule detail extent within the weight budget.
 In assembly these controls retain spatial extent, fragment count, optional links,
 and field coverage; network density remains an occupancy target.
-`styles` lists engines, composition grammars, palettes, materials, and alphabets.
-Materials: rounded, square, heavy, double, dashed. Alphabets: geometric,
-punctuation, technical, granular, or explicitly selected runic. Defaults come
-from the seed; material, alphabet, and palette overrides are independent. Classic
-named styles remain opt-in
-with `--style signal`, `reliquary`, `mycelium`, `orrery`, or `xenoweave` (levels 1–5).
+`styles` lists engines, palettes, materials, and alphabets.
+Materials: rounded, square, heavy, double, dashed. Alphabets: geometric or
+granular by default; punctuation, technical, and runic when selected explicitly.
+Defaults come from the seed; material, alphabet, and palette overrides are
+independent.
 
 `--palette generated` is the default. Hue relationships, lightness, and chroma
 range continuously from restrained near-monochrome colors to separated accents.
@@ -170,11 +164,12 @@ For role compositions it also reports grouping, input relationships, accepted an
 rejected proposals, weight budgets, and the planning-to-display row map.
 All mutation scopes preserve resolved colors; use `--color-seed` to resample them.
 Ordinary `inspect` emits the reloadable recipe, with the selected engine and every
-sampled control resolved. Fresh composed designs use version 7, including separate
+sampled control resolved. Fresh designs use version 8, including separate
 component and fragment seeds so pinned discoveries replay exactly. Generated
-colors persist as `colors`, `colorSeed`, and `colorProgram`. Saved version-1–6
-recipes preserve their generators and appearance; version-1–4 recipes without an
-`info` field retain their original static labels.
+colors persist as `colors`, `colorSeed`, and `colorProgram`. Saved version-6 and
+version-7 recipes keep their generators and appearance. Recipes from Promptly 0.5
+and earlier (versions 1–5) and the classic named styles can no longer be loaded;
+their exported `.zsh` files are standalone and keep working.
 Existing output files require `--force` to replace. See `--help` for every control.
 
 Galleries deterministically choose distinct geometries from a larger seed pool.
@@ -220,8 +215,9 @@ The terminal suite uses the Ghostty backend of
 [microsoft/tui-test](https://github.com/microsoft/tui-test), version
 `0.1.0-beta.5`. Put the official binary in `.tools/` or set `TUI_TEST_BIN`.
 It runs isolated shell sessions, verifies actual cell/cursor state, and writes
-captures under ignored `artifacts/`. Generated examples are tracked; rerun
-`npm run examples` after changing grammars or the runtime.
+captures under ignored `artifacts/`. On Linux, install zsh from the distribution
+(e.g. `apt install zsh`); the suite uses its own startup files. Generated examples
+are tracked; rerun `npm run examples` after changing engines or the runtime.
 
 Architecture and continuation notes live in [docs/architecture.md](docs/architecture.md).
 Release and tap maintenance are documented in [docs/releases.md](docs/releases.md).

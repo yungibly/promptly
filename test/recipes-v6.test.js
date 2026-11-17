@@ -125,18 +125,3 @@ test('version-6 recipes reject malformed colors, invalid budgets, seeds, and unr
   }
   assert.throws(() => fromRecipe({ ...value, engine: 'auto' }), /resolved composition engine/);
 });
-
-test('saved version-4 and version-5 specimens retain frozen scenes and derivations', () => {
-  const hashes = {
-    compose: 'd08351b3eb2c2f45c077ce0e039e65aecd872acd40ecc94d1b4e24b6a5e60b97',
-    surface: '6da05bb578b072de60f6c452c5acddd76290bf72a36fe8690655e60f4d9cb670',
-    'surface-capsule': '8a63c6f5bdf5a1727be54ac1a7a455aedc0ea831ad30712c5ff5cf82ebb643d7',
-    'surface-curves': 'df1dbf1103b81d92159bdc6da83875775886ffb574fdb16761cba6c62fe2e4e0',
-  };
-  for (const [name, expected] of Object.entries(hashes)) {
-    const value = saved(name), design = fromRecipe(value);
-    assert.equal(design.version, name === 'compose' ? 4 : 5);
-    assert.deepEqual(recipe(design), value);
-    assert.equal(createHash('sha256').update(JSON.stringify(composition(design))).digest('hex'), expected, name);
-  }
-});
