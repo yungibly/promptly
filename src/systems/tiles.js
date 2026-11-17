@@ -5,6 +5,7 @@ import { ramp, mix, palette, emit, fixed, smooth, clamp, occupied, grid } from '
 import { fbm } from './noise.js';
 import { roles, line, clearance, paint, marker } from './stage.js';
 import { compact } from './compact.js';
+import { texture } from './texture.js';
 
 // Tile fields: every cell chooses a tile from local rules, and the pattern
 // emerges from neighbors agreeing. Contours use marching squares on corner
@@ -30,8 +31,40 @@ function terrain(rng, cols, rows, complexity, fragments) {
 }
 
 export function tiles(config) {
-  // One to three rows: quarter-arc chains and meanders, or a 10-PRINT run.
-  if (config.height <= 3) return compact(config, 'tiles', { kinds: ['truchet', 'truchet', 'maze'] });
+  // One to three rows: continuous runs only. One row is a strictly
+  // alternating cap-and-cup chain or a dense 10-PRINT run; two rows add the
+  // rounded meander. Nothing fades or cuts through them.
+  if (config.height <= 3) return compact(config, 'tiles', { kinds: (rows) => rows > 1 ? ['meander', 'meander', 'maze'] : ['chain', 'chain', 'maze'],
+    arrangements: ['trail', 'lead', 'beside', 'above'], fades: false, art: (kind, rng, options) => {
+      if (kind === 'meander') return texture('truchet', rng, options);
+      const inks = ramp([options.colors.stops[1], options.colors.stops.at(-1)], 6);
+      const ink = (x) => inks[Math.min(5, Math.floor(x / options.width * 6))];
+      if (kind === 'maze') {
+        // Every cell holds a diagonal; low detail repeats them into calm
+        // zigzags, high detail randomizes them into a busier maze.
+        const keep = 0.75 - options.detail * 0.55, bias = 0.35 + rng.next() * 0.3;
+        return Array.from({ length: options.rows }, () => {
+          let last = rng.next() < bias;
+          return Array.from({ length: options.width }, (_, x) => {
+            if (rng.next() >= keep) last = rng.next() < bias;
+            const ch = last ? '╱' : '╲';
+            return { ch: options.ascii ? (last ? '/' : '\\') : ch, fg: ink(x) };
+          });
+        });
+      }
+      const line = Array(options.width).fill(null);
+      let cap = rng.chance(0.5);
+      for (let x = 0; x < options.width;) {
+        // Straight runs shorten as detail rises, so the chain turns more often.
+        const run = Math.min(rng.next() < 0.7 - options.detail * 0.6 ? rng.int(1, 2) : 0, options.width - x - 2);
+        if (run < 0) break;
+        line[x] = { ch: cap ? '╭' : '╰', fg: ink(x) };
+        for (let i = 1; i <= run; i++) line[x + i] = { ch: '─', fg: ink(x) };
+        line[x + run + 1] = { ch: cap ? '╮' : '╯', fg: ink(x) };
+        x += run + 2; cap = !cap;
+      }
+      return [options.ascii ? line.map((cell) => cell && { ...cell, ch: { '╭': '/', '╯': '/', '╮': '\\', '╰': '\\', '─': '-' }[cell.ch] }) : line];
+    } });
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, 'structure:tiles');
   const layout = random(config.layoutSeed ?? config.seed, 'structure:tiles:layout');

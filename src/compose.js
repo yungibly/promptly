@@ -125,7 +125,7 @@ function annotations(network, scene, config, rng, xAnchor) {
 }
 
 function evolvedAnnotations(network, scene, config, xAnchor) {
-  const { alphabet, complexity, label, labelRow, cols } = config;
+  const { alphabet, complexity, label, labelRow, cols } = config, limit = config.limit ?? cols;
   const structure = random(config.artSeed ?? config.seed, 'structure:network:annotations');
   const minStep = 78 / (cols - 1), occupied = new Set(network.nodes.keys()), slots = [];
   const shared = deriveMotif(config.motifSeed ?? config.seed);
@@ -162,9 +162,9 @@ function evolvedAnnotations(network, scene, config, xAnchor) {
   }
   let placed = 0;
   for (let i = 0; i < 30 + complexity * 15 && placed < complexity * 2; i++) {
-    const x = structure.int(2, cols - 3), y = structure.int(0, network.height - 1);
+    const x = structure.int(2, limit - 3), y = structure.int(0, network.height - 1);
     const width = structure.int(1, 3 + complexity), radius = radiusFor(width);
-    if (x - radius < 1 || x + radius >= cols - 1) continue;
+    if (x - radius < 1 || x + radius >= limit - 1) continue;
     if (Array.from({ length: radius * 2 + 1 }, (_, j) => key(p(x + j - radius, y))).some((id) => occupied.has(id))) continue;
     put(x, y, width, structure.pick([0, 1, 3]), 'free');
     placed++;
@@ -201,7 +201,14 @@ export function compose(config) {
   const { rng, ornament, complexity, glyphs, height, symmetry, material, alphabet } = config;
   const cols = 41;
   const artHeight = height - 1;
-  const planningWidth = symmetry === 'mirror' ? (cols + 1) / 2 : cols;
+  // Version 8 keeps the network near the text: it grows in the left 45–60% of
+  // the width (an odd count of lattice columns, so a mirror keeps a center
+  // column). Cell spacing is unchanged; the graph is planned on fewer columns.
+  // Text set into the art is placed within the region, so it is a layout
+  // choice: a layout pin holds it while the graph rerolls.
+  const latest = config.version >= 8;
+  const region = latest ? 2 * random(config.layoutSeed ?? config.seed, 'structure:network:region').int(9, 12) + 1 : cols;
+  const planningWidth = symmetry === 'mirror' ? (region + 1) / 2 : region;
   const labelRow = rng.pick([0, artHeight - 1]);
   const labelEnd = Math.ceil((config.label.length + 8) / (78 / (cols - 1)));
   const reservations = [{ x: 1, right: labelEnd, y: labelRow, bottom: labelRow }];
@@ -210,7 +217,6 @@ export function compose(config) {
   // Version 8: command entry meets the graph only sometimes, and the first
   // route need not span the lattice. The rail moves the live band, so it is
   // a layout choice (interaction seed); a railed route starts at the edge.
-  const latest = config.version >= 8;
   const rail = !latest || random(config.interactionSeed ?? config.seed, 'structure:network:input').chance(0.3);
   const extent = latest ? random(config.artSeed ?? config.seed, 'structure:network:extent') : null;
   const first = !rail && extent.chance(0.35) ? extent.int(2, Math.floor(planningWidth / 3)) : 0;
@@ -248,7 +254,7 @@ export function compose(config) {
   const network = new Network(cols, artHeight);
   for (const edge of graph.edges.values()) {
     network.add([[edge.a, edge.b]], edge);
-    if (symmetry === 'mirror') network.add([reflect([edge.a, edge.b], (cols - 1) / 2)], edge);
+    if (symmetry === 'mirror') network.add([reflect([edge.a, edge.b], (region - 1) / 2)], edge);
   }
   const scene = new Scene(height, glyphs);
   const xAnchor = compileNetwork(network, scene, cols, material);
@@ -258,7 +264,7 @@ export function compose(config) {
     scene.wire({ row: height - 1, x: xAnchor(0) }, { row: height - 1, x: left(3) }, 1, materials[material]);
   }
   const inputX = rail ? 4 : 0;
-  const annotationResult = annotations(network, scene, { ...config, cols, labelRow }, ornament, xAnchor);
+  const annotationResult = annotations(network, scene, { ...config, cols, limit: region, labelRow }, ornament, xAnchor);
   const placements = config.evolved ? annotationResult.placements : annotationResult;
   const inputExpression = expression(ornament, alphabet, 3, 2);
   const input = renderExpression(inputExpression);
@@ -272,7 +278,7 @@ export function compose(config) {
     scene, cursor: input.length + inputX + 1, rightPrompt,
     program: {
       engine: 'graph-rewrite/1', lattice: { columns: cols, planningColumns: planningWidth, rows: artHeight },
-      reservations, ...(latest ? { extent: { first, last }, inputLink: { kind: rail ? 'rail' : 'none', offset: inputX } } : {}),
+      reservations, ...(latest ? { extent: { first, last }, region: { columns: region, cells: Math.round((region - 1) * 78 / (cols - 1)) + 1 }, inputLink: { kind: rail ? 'rail' : 'none', offset: inputX } } : {}),
       traits: { material, alphabet, symmetry, density: config.density, weights },
       derivation, annotations: placements, input: inputExpression, right: rightExpression,
       ...(config.evolved ? { annotationPlan: annotationResult.plan, motif: annotationResult.motif } : {}),

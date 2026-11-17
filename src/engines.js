@@ -19,8 +19,8 @@ export const engines = {
   field: { rows: [1, 8], heights: [1, 2, 3, 3, 4, 5, 6, 8], footprint: [1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4], controls: true, weight: 1, since: 8 },
   tiles: { rows: [1, 8], heights: [2, 3, 3, 4, 5, 6, 8], footprint: [1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3], controls: true, weight: 0.9, since: 8 },
   automaton: { rows: [1, 8], heights: [2, 3, 3, 4, 5, 6, 8], footprint: [1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 2, 4], controls: true, weight: 0.9, since: 8 },
-  growth: { rows: [1, 8], heights: [3, 3, 4, 4, 5, 6, 8], footprint: [1, 2, 2, 2, 2, 2, 3, 3, 3], controls: true, weight: 0.6, since: 8 },
-  plot: { rows: [1, 8], heights: [1, 2, 3, 4, 5, 6, 8], footprint: [1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3], controls: true, weight: 0.8, since: 8 },
+  growth: { rows: [1, 8], heights: [3, 3, 4, 4, 5, 6, 8], footprint: [3, 3, 3, 2], controls: true, weight: 0.4, since: 8 },
+  plot: { rows: [1, 8], heights: [1, 2, 3, 4, 5, 6, 8], footprint: [3, 3, 3, 2], controls: true, weight: 0.5, since: 8 },
 };
 
 export const engineNames = () => Object.keys(engines);
