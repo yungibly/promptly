@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir, userInfo } from 'node:os';
 import { join } from 'node:path';
 import { createDesign } from '../src/design.js';
@@ -12,7 +12,9 @@ import { flatten } from '../src/flatten.js';
 const base = createDesign({ seed: 'hugging', engine: 'surface', height: 2 });
 const wide = (char) => /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u.test(char) ? 2 : 1;
 const cellWidth = (text) => [...text].reduce((n, char) => n + wide(char), 0);
-const root = mkdtempSync(join(tmpdir(), 'promptly-hug-'));
+// macOS keeps temporary files behind the /var -> /private/var symlink; zsh
+// compares HOME with the physical PWD, so use the resolved path.
+const root = realpathSync(mkdtempSync(join(tmpdir(), 'promptly-hug-')));
 test.after(() => rmSync(root, { recursive: true, force: true }));
 
 // Run the exported source in zsh. A username cannot be changed without
