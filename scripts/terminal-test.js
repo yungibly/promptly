@@ -11,6 +11,7 @@ import { gallery, signature } from '../src/gallery.js';
 import { compile as legacy } from '../test/fixtures/legacy-compile.js';
 import { testExplorer } from './explorer-terminal.js';
 import { testV7 } from './v7-terminal.js';
+import { testHugging } from './hugging-terminal.js';
 
 const binary = resolve(process.env.TUI_TEST_BIN || '.tools/tui-test');
 const root = resolve('.');
@@ -377,6 +378,7 @@ try {
 
   const explorerReport = testExplorer({ tui, state, check, eventually, snapshot, output });
   const v7Report = testV7({ tui, state, check, eventually, snapshot, output, cells });
+  testHugging({ tui, state, check, eventually, snapshot, output, cells });
 
   const normalizedColors = ['#707070', '#969696', '#eeeeee', '#bbbbbb', '#d8d8d8', '#ffffff', '#303030'];
   for (const [name, subtitle, commonColors] of [
