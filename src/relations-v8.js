@@ -232,8 +232,9 @@ export function proposeCompact(plan, config) {
   }
   for (const tail of plan.tails.filter(Boolean)) add({ level: 'link', target: `tail:${tail.cluster}`, cluster: tail.cluster, op: 'tail', cells: 0, fill: 0, edge: Math.ceil(tail.length / 4) }, 0.45);
   if (plan.strip) add({ level: 'row', target: 'strip', op: 'strip', cells: 0, fill: 0, edge: Math.ceil(plan.strip.width / 4) }, 0.25 + weight * 0.45);
-  // A right-prompt accent is occasional; on every prompt it became a habit.
-  if (!config.band && rng.chance(0.3)) add({ level: 'right', target: 'accent', op: 'accent', cells: 0, fill: 0, edge: 2 }, weight * 0.3);
+  // A right-prompt accent is occasional; on every prompt it became a habit,
+  // and at wide widths a far accent beside a quiet prompt read as confetti.
+  if (!config.band && weight >= 0.25 && rng.chance(0.12)) add({ level: 'right', target: 'accent', op: 'accent', cells: 0, fill: 0, edge: 2 }, weight * 0.3);
   const used = { fill: 0, edge: 0, treatments: 0 }, accepted = [];
   const taken = new Map();
   for (const proposal of [...proposals].sort((a, b) => b.priority - a.priority || a.id - b.id)) {
@@ -245,7 +246,7 @@ export function proposeCompact(plan, config) {
     else if (!['link', 'bare'].includes(proposal.level) && proposal.op !== 'bare' && used.treatments >= budgets.treatments) reason = 'treatment-budget';
     else if (used.fill + proposal.fill > budgets.fill || used.edge + proposal.edge > budgets.edge) reason = 'visual-weight-budget';
     // One large gesture per prompt: a bed or a strip, not both.
-    else if (proposal.op === 'strip' && accepted.some((p) => p.op === 'bed') || proposal.op === 'bed' && taken.has('strip')) reason = 'one-gesture';
+    else if (proposal.op === 'strip' && accepted.some((p) => ['bed', 'accent'].includes(p.op)) || ['bed', 'accent'].includes(proposal.op) && taken.has('strip')) reason = 'one-gesture';
     // Nested fills would hide each other; a segmented pill owns its items.
     else if (proposal.level === 'item' && host && ['pill', 'segmented', 'bed'].includes(host.op)) reason = 'inside-surface';
     else if (proposal.level === 'cluster' && ['pill', 'segmented', 'bed'].includes(proposal.op) && inner.length) reason = 'contains-treatment';
@@ -289,15 +290,18 @@ export function composeRelationsV8(config) {
   // texture, repeated wherever the plan left room: leaders, tails, a strip,
   // and the right accent. Ornament chooses it, so geometry never depends on it.
   const quiet = weight < 0.25;
-  // Surface leans on filled material, prompt on line work. Sprigs read too
-  // faintly in one row; the strongest one-row kinds lead.
-  const idea = quiet ? null : ornament.pick(config.engine === 'prompt'
-    ? ['wave', 'wave', 'truchet', 'truchet', 'maze', 'automaton']
-    : ['ridge', 'ridge', 'automaton', 'automaton', 'dissolve', 'wave', 'truchet']);
-  const beat = rhythm(ornament.pick(rhythmKinds), fork('rhythm'), { colors, ascii });
-  // A wave swings away from its anchor, so it leaves the text; seeded or
-  // sprouting kinds would stay hidden under it and fill the canvas instead.
-  const strip = (key, width, { anchor } = {}) => texture(idea, fork(key), { width, rows: 1, colors, ascii, ...(idea === 'wave' ? { anchor } : {}) })[0];
+  // Surface leans on filled material, prompt on line work. An idea is a pair:
+  // a kind that holds up in one row (ridge, dissolve, maze) and the kind for a
+  // texture two rows tall, where an automaton, a truchet meander, or a
+  // gradient band reads cleanly. Braille waves and sprigs read as grit at this
+  // scale, and a one-row gradient tail as a solid slab.
+  const [idea, tall] = quiet ? [null, null] : ornament.pick(config.engine === 'prompt'
+    ? [['maze', 'maze'], ['maze', 'truchet'], ['ridge', 'truchet'], ['dissolve', 'maze'], ['maze', 'gradient']]
+    : [['ridge', 'ridge'], ['dissolve', 'dissolve'], ['ridge', 'gradient'], ['dissolve', 'automaton'], ['ridge', 'automaton'], ['dissolve', 'gradient']]);
+  const beat = rhythm(ornament.pick(rhythmKinds.filter((kind) => !['wave', 'chain'].includes(kind))), fork('rhythm'), { colors, ascii });
+  // A gradient is brightest at its anchor; other kinds fill their canvas.
+  const strip = (key, width, { anchor } = {}) => texture(idea, fork(key), { width, rows: 1, colors, ascii, ...(idea === 'gradient' ? { anchor } : {}) })[0];
+  const rhythmCells = (width) => Array.from({ length: width }, (_, x) => { const glyphs = [...beat.text], ch = glyphs[x % glyphs.length]; return ch === ' ' ? null : { ch, fg: beat.ink }; });
   // Lines carry a gradient toward command entry rather than one flat ink.
   const glow = ramp([mix(colors.quiet, colors.ground, 0.2), colors.stops.at(-1)], 6);
   const scene = new Scene(plan.rows, config.glyphs);
@@ -305,6 +309,26 @@ export function composeRelationsV8(config) {
   const byTarget = new Map(treatment.accepted.map((p) => [p.target, p]));
   // A bed is then the prompt's one idea; other canvases keep a quiet rhythm.
   const bedded = treatment.accepted.some((p) => p.op === 'bed');
+  // Texture lives outside related text: a tail, or a leader into command
+  // entry, not a gap between clusters of one line, which keeps the rhythm.
+  const textured = (cluster) => {
+    if (!idea || bedded || plan.clusters[cluster.id] !== cluster) return false;
+    const line = plan.lines[cluster.line], last = line.clusters.at(-1) === cluster.id;
+    return byTarget.has(`tail:${cluster.id}`) || last && byTarget.has(`leader:${cluster.id}`);
+  };
+  // A strip beside a textured canvas is the same texture two rows tall: one
+  // gesture, the text sitting in its lower or upper half.
+  let twin = null;
+  if (plan.strip && byTarget.has('strip')) {
+    const below = plan.strip.position === 'below';
+    const near = plan.lines[below ? plan.lines.length - 1 : 0];
+    const host = plan.clusters[near.clusters.at(-1)];
+    if (textured(host) && near.clusters.length === 1) {
+      const span = host.width + (byTarget.has(`tail:${host.id}`) ? plan.tails[host.line].length : 0);
+      const grid = texture(tall, fork('pair'), { width: span, rows: 2, colors, ascii });
+      twin = { host: host.id, x: host.x, strip: grid[below ? 1 : 0], canvas: grid[below ? 0 : 1] };
+    }
+  }
   const paint = [], roles = [];
   for (const cluster of plan.clusters) {
     const chosen = byTarget.get(`cluster:${cluster.id}`);
@@ -392,12 +416,12 @@ export function composeRelationsV8(config) {
     const span = cluster.width + extra;
     let cells = null, pad = { text: ' ', ink: 0 }, canvas = null;
     if (bed) { cells = bed; canvas = 'bed'; }
-    else if ((leader || tail) && idea && !bedded) { cells = strip(`pad:${cluster.id}`, span, { anchor: tail ? 0 : span - 1 }); canvas = idea; }
+    else if (twin?.host === cluster.id) { cells = twin.canvas; canvas = tall; }
+    else if (textured(cluster)) { cells = strip(`pad:${cluster.id}`, span, { anchor: tail ? 0 : span - 1 }); canvas = idea; }
     else if (leader || tail) {
       canvas = 'rhythm';
       // A quiet rhythm, phased from the cluster's first cell.
-      const glyphs = [...beat.text];
-      cells = Array.from({ length: span }, (_, x) => glyphs[x % glyphs.length] === ' ' ? null : { ch: glyphs[x % glyphs.length], fg: beat.ink });
+      cells = rhythmCells(span);
       // A tail thins out through an ordered threshold, never adding cells.
       if (tail) cells = cells.map((cell, x) => x < cluster.width || (x * 7 % 11) / 11 < 1 - (x - cluster.width) / extra ? cell : null);
     } else if (elbow) canvas = 'elbow', cells = Array.from({ length: span }, (_, x) => ({ ch: lines[10], fg: glow[Math.min(glow.length - 1, Math.floor(x / span * glow.length))] }));
@@ -439,9 +463,8 @@ export function composeRelationsV8(config) {
   // A strip row hangs above or below the text, growing from its start.
   if (plan.strip && byTarget.has('strip')) {
     const { row, x, width } = plan.strip;
-    const cells = idea ? strip('strip', width, { anchor: 0 })
-      : Array.from({ length: width }, (_, i) => [...beat.text][i % [...beat.text].length] === ' ' ? null : { ch: [...beat.text][i % [...beat.text].length], fg: beat.ink });
-    emit(scene, [cells], fixed(0, x), row);
+    if (twin) emit(scene, [twin.strip], fixed(0, twin.x), row);
+    else emit(scene, [idea ? strip('strip', width, { anchor: 0 }) : rhythmCells(width)], fixed(0, x), row);
   }
   scene.text(plan.marker.row, left(plan.marker.x), marker, 4);
   scene.runs.at(-1).purpose = 'input';
@@ -449,8 +472,8 @@ export function composeRelationsV8(config) {
   let rightRuns = [];
   if (byTarget.has('accent')) {
     const width = ornament.int(6, 12);
-    const cells = idea && !bedded ? strip('accent', width, { anchor: width - 1 })
-      : Array.from({ length: width }, (_, i) => [...beat.text][i % [...beat.text].length] === ' ' ? null : { ch: [...beat.text][i % [...beat.text].length], fg: beat.ink });
+    // Only solid kinds: a lone braille accent at the far edge read as noise.
+    const cells = texture(idea && !bedded ? idea : 'gradient', fork('accent'), { width, rows: 1, colors, ascii, anchor: width - 1 })[0];
     for (const cell of cells) {
       const glyph = !cell ? ' ' : cell.ch === ' ' ? (ascii ? '#' : '█') : cell.ch, color = cell ? cell.fg ?? cell.bg : null;
       if (rightRuns.length && (color === null || rightRuns.at(-1).ink === color)) rightRuns.at(-1).text += glyph;
@@ -469,7 +492,7 @@ export function composeRelationsV8(config) {
     scene, cursor: plan.marker.x + 2, rightPrompt: rightRuns.map((r) => r.text).join(''), ...(rightRuns.length ? { rightRuns } : {}),
     program: {
       engine: 'role-relations/3', lattice: { columns: 79, rows: plan.rows },
-      traits: { weight, material: config.material, alphabet: config.alphabet, density: config.density, idea: idea ?? 'rhythm', palette: colors.family },
+      traits: { weight, material: config.material, alphabet: config.alphabet, density: config.density, idea: idea ?? 'rhythm', tall: tall ?? null, palette: colors.family },
       derivation: { ...plan, roles: placed, ...treatment }, annotations: { marker, rhythm: beat.text }, paint, rowMap,
       interactions: { mode: 'roles', ports: rolePorts(placed), masks: roleMasks(placed), attachments: [] },
       stats: { fragments: plan.clusters.length, groups: plan.lines.length,
