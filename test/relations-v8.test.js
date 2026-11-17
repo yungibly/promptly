@@ -89,10 +89,10 @@ test('compact prompts carry one textured idea, outside related text, rather than
     const canvases = paint.map((p) => p.canvas).filter(Boolean);
     // One idea: a one-row kind, its two-row partner where a strip joins a
     // tail, a bed, elbows, and quiet rhythms. Braille grit stays out, and
-    // automata and meanders only appear two rows tall.
+    // truchet meanders only appear two rows tall.
     assert.ok(canvases.every((kind) => ['bed', 'elbow', 'rhythm', traits.idea, traits.tall].includes(kind)), `${design.seed}: ${canvases}`);
-    assert.ok(!canvases.some((kind) => ['wave', 'sprig'].includes(kind)) && !['wave', 'sprig', 'automaton', 'truchet'].includes(traits.idea), design.seed);
-    for (const [i, p] of paint.entries()) if (['automaton', 'truchet'].includes(p.canvas)) assert.ok(ops.has('strip') && derivation.strip, `${design.seed}: ${p.canvas} in one row`);
+    assert.ok(!canvases.some((kind) => ['wave', 'sprig'].includes(kind)) && !['wave', 'sprig', 'truchet'].includes(traits.idea), design.seed);
+    for (const p of paint) if (p.canvas === 'truchet') assert.ok(ops.has('strip') && derivation.strip, `${design.seed}: truchet in one row`);
     // Texture never sits between clusters of one line.
     for (const line of derivation.lines) for (const id of line.clusters.slice(0, -1)) {
       assert.ok([null, 'rhythm', 'bed'].includes(paint[id].canvas), `${design.seed}: texture between related text`);
