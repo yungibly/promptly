@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createDesign, mutateDesign, recipe } from '../src/design.js';
@@ -118,7 +118,7 @@ test('weight, ornament, and color never move a version-8 field or the input anch
 });
 
 test('hugging compact prompts keep their cursor while the directory changes', () => {
-  const root = mkdtempSync(join(tmpdir(), 'promptly-v8-'));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'promptly-v8-')));
   try {
     const short = join(root, 'a'), long = join(root, 'a-considerably-longer-directory', 'with', 'more', 'levels');
     mkdirSync(long, { recursive: true }); mkdirSync(short, { recursive: true });
