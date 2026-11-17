@@ -43,6 +43,16 @@ test('narrow textures are never empty, and anchored beds peak at the anchor', ()
   }
 });
 
+test('detail changes each texture without changing its footprint', () => {
+  for (const kind of textureKinds) {
+    const make = (detail) => texture(kind, random(`detail/${kind}`, 'texture'), { width: 30, rows: 2, colors: colors('detail'), detail });
+    const low = make(0), high = make(1);
+    assert.equal(low.length, high.length); assert.ok(low.every((line, y) => line.length === high[y].length));
+    assert.notDeepEqual(low, high, `${kind}: detail had no effect`);
+  }
+  assert.throws(() => texture('maze', random('x'), { width: 4, colors: colors('x'), detail: 2 }), /detail/);
+});
+
 test('textures are deterministic, and ASCII keeps the exact occupied cells', () => {
   for (const kind of textureKinds) for (const rows of [1, 2]) {
     const options = { width: 24, rows, colors: colors('ascii'), anchor: 5, fade: 'both' };
