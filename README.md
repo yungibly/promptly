@@ -1,29 +1,20 @@
 # Promptly
 
-A seeded generative art instrument that exports standalone zsh prompts with your
-live username and current directory. Automatic sampling explores painted text
-surfaces, compact line art, connected networks, and freeform cell art. Text roles
-define protected intervals; shared or individual treatments grow around them.
-Strokes can attach to live fields or pass behind them, and evolving motifs echo
-across fragments and text treatments. An optional terminal explorer lets you keep
-parts of a discovery while rerolling its surroundings.
-Color relationships are generated continuously. Arrangement, visual weight,
-color, and detail vary independently. No Git, clocks, network calls, or runtime agent.
+A seeded generative art instrument whose medium is your zsh prompt. Each roll
+commits to one idea at prompt scale: a gradient bed under your username and
+directory, a ridge or dissolve trailing the path, a cellular-automaton strip, a
+quarter-arc meander, a small connected circuit. Most rolls are one to three rows
+and stay out of the way of what you type; taller horizons, contour maps, and
+networks are there when you ask for them. Live text is part of the composition:
+decoration hugs the current directory as it changes length, art grows from the
+text, and the input row stays clean. Exports are standalone native zsh with no
+Git, clocks, network calls, subprocesses, or runtime agent.
 
-[New default rolls rendered through Ghostty](docs/v7-defaults.png)
-· [Shapes with fixed colors](docs/v7-normalized.png)
-· [Shared artwork and live text](docs/v7-interactions.png)
-· [Asymmetric horizontal caps](docs/v7-caps.png)
+[Default rolls rendered through Ghostty](docs/defaults.png)
+· [Compact engines](docs/compact.png)
+· [Generative systems at prompt scale](docs/systems.png)
+· [Taller art with `--height`](docs/tall.png)
 · [Interactive explorer](docs/explorer.png)
-· [Earlier default rolls](docs/defaults-1.png)
-· [More default rolls](docs/defaults-2.png)
-· [Range extremes](docs/default-extremes-1.png)
-· [Defaults with fixed colors](docs/defaults-1-normalized.png)
-· [Compact compositions](docs/relations.png)
-· [Horizontal capsules](docs/capsules-v6.png)
-· [Mixed possibilities](docs/possibilities.png)
-· [Freeform compositions](docs/assembly.png)
-· [Connected networks](docs/primitives.png)
 
 ## Install
 
@@ -58,7 +49,8 @@ redirection. The output contains precompiled colored text, native zsh padding
 expressions for resizing, live username/directory fields, and its recipe. It works
 independently of the generator, without drawing functions, redraw hooks, or
 prompt-time subprocesses. Each run picks a fresh seed; specify `--seed` to repeat
-a design. With no extra controls, fresh composed prompts sample the full
+a design; without one, Promptly rolls a few seeds of the same engine and keeps
+the most coherent. With no extra controls, fresh composed prompts sample the full
 complexity range as well as engine, row budget, visual weight, and color. Nothing
 is held at a fixed complexity level unless you set it or load a saved recipe.
 The CLI never modifies `.zshrc`. To keep a particular design across shell sessions,
@@ -75,8 +67,10 @@ promptly --preview --seed spore --color-seed warm-study
 Use the same options to preview and export the same design. `promptly_off` restores
 the previous prompt and prompt expansion options in the current shell.
 
-Username and directory update through zsh's native prompt expansion. Long values
-truncate inside reserved cells, so they cannot displace the artwork or input.
+Username and directory update through zsh's native prompt expansion. Brackets,
+pills, and leaders hug the current value as it changes length, while artwork and
+the input column stay fixed. Long values truncate inside their reserved cells, so
+they cannot displace the artwork or input.
 `--label TEXT` adds a static inscription. `--no-info` omits live fields;
 `--info` enables them on a recipe saved without them.
 
@@ -102,38 +96,40 @@ save. Exports refuse to replace existing files unless `--force` is supplied.
 The explorer uses stdin and stderr for its terminal interface, so
 `promptly explore > winner.zsh` keeps exported shell code separate from the UI.
 
-`--engine auto` is the default. It samples an eligible procedural engine, a row
-budget, and complexity independently. Fresh composed prompts sample each integer
-complexity from 1 through 10 with equal probability; choosing an explicit engine
-still samples complexity and its compatible row budget. Small intricate prompts
-and large sparse artwork both remain possible. Galleries balance the available
-families and select different geometries within them. Focus exploration when desired:
+`--engine auto` is the default. It samples an engine, a row budget, visual
+weight, color, and complexity independently; each integer complexity from 1
+through 10 is equally likely. Automatic rolls are mostly one to three rows (two
+most often), about one in nine is four or five rows, and taller art appears when
+`--height` asks for it. Choosing an engine keeps the same prompt-scale budget.
+Galleries balance every family and give tall specimens only their share.
 
-- `--engine surface`: 1–3 rows, shared role composition with optional single-row
-  surfaces, horizontal caps, edges, brackets, rules, and rails.
-- `--engine prompt`: the same 1–3 row composer with a preference for line treatments.
-- `--engine network`: connected recursive geometry, 4–12 rows.
-- `--engine assembly`: independently placed cell art, a 2–12 row budget.
+Compact engines arrange the username and directory as flowing or stacked text
+clusters, then give the slack around them one material:
 
-Version 8 is prompt-scale first: a design you would keep on every command.
-Automatic rolls are mostly one to three rows (two most often), about one in
-nine is four or five rows, and taller art appears when `--height` asks for it.
-Five generative systems commit each prompt to one idea, with the live text as a
-participant. At one to three rows each places a bounded piece of art (about forty
-cells at 80 columns) beside, above, or through the text, or puts the text on a
-gradient bed; taller heights keep their larger forms:
+- `--engine surface`: filled pills, gradient beds that dither in from the
+  terminal, ridges, dissolves, and automaton slices.
+- `--engine prompt`: line work: dotted and beaded leaders, maze runs, quarter-arc
+  chains, single-strand waves, two-row meanders, elbows and rails into the input.
 
-- `--engine field`: ridges and dithered dissolves near the text, or the text on a
-  truecolor bed; at four rows and up, layered horizons with a valley under the
-  text (mirror symmetry adds a dotted lake), or braille ripples.
-- `--engine tiles`: quarter-arc chains and meanders or a 10-PRINT run; at four
-  rows and up, topographic contours ringing the text on a plateau.
-- `--engine automaton`: cellular automata strips seeded from the label; at four
-  rows and up, runs falling from the text or rising from the input marker.
-- `--engine growth`: sprigs and coral rising toward the text; at four rows and
-  up, braille vines from the marker and diffusion-limited coral.
-- `--engine plot`: braille waves and Lissajous loops; at four rows and up,
+Five generative systems place one bounded piece of art (about forty cells at 80
+columns) beside, above, or through the text, or set the text on a bed. At four
+rows and up they keep their larger forms:
+
+- `--engine field`: ridges and dithered dissolves, or the text on a truecolor
+  bed; tall: layered horizons with a valley under the text, or braille ripples.
+- `--engine tiles`: quarter-arc chains, meanders, and maze runs; tall:
+  topographic contours ringing the text on a plateau.
+- `--engine automaton`: cellular automaton strips seeded from the label; tall:
+  runs falling from the text or rising from the input marker.
+- `--engine growth`: braille vines and coral rooted at the text.
+- `--engine plot`: a single gradient wave trace or Lissajous loop; tall:
   hidden-line ridgelines, harmonographs, and oscilloscope traces.
+
+The larger families remain in the automatic mix:
+
+- `--engine network`: a connected recursive circuit that grows from the text and
+  stays within about half the width; 4–12 rows.
+- `--engine assembly`: independently placed cell-art fragments; 2–12 rows.
 
 All engines support complexity 1–10. `--weight 0..1` sets the live-role band's visual
 weight independently of complexity; zero leaves bare typography. `--height`
@@ -193,7 +189,9 @@ their exported `.zsh` files are standalone and keep working.
 Existing output files require `--force` to replace. See `--help` for every control.
 
 Galleries deterministically choose distinct geometries from a larger seed pool.
-Selection balances engines and compares spatial occupancy and scale;
+Each engine's weakest candidates are dropped first (stray text, thin scatter,
+tall sparse art), then selection balances engines and compares spatial occupancy
+and scale;
 changing only color or glyph mode does not change the selected seeds.
 The displayed seed reproduces each specimen with `preview` or `export`.
 

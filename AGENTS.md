@@ -1,7 +1,12 @@
 # Working on Promptly
 
-This is a generative art project whose medium is a usable zsh prompt. The current
-direction is smaller composable primitives, recursive structure, and broad visual
+This is a generative art project whose medium is a usable zsh prompt. Version 8
+is prompt-scale first: an automatic roll should be something you would keep on
+every command, so most are one to three rows with a bounded piece of art attached
+to the live text, and interest comes from material (gradients, half-block and
+braille detail, automata, tiles) rather than size. Tall art stays available
+through `--height` and appears occasionally. The direction is smaller composable
+primitives, generative systems with one idea per prompt, and broad visual
 possibility. The classic named layouts and the version 1–5 generators were retired
 in 0.9; saved version 6 and 7 recipes must keep their exact output. Prefer
 interoperable geometry and ornament operations over more full-prompt templates. Preserve controlled color and negative
@@ -35,6 +40,9 @@ procedural families. Complexity should add detail without always increasing size
 - Increase complexity through nested structure and detail while preserving legibility.
 - Judge variety through actual shape and occupied medium, not seeds or colors alone.
   Check sparse, dense, short, tall, unlinked, and linked specimens in Ghostty.
+- Keep the version-8 footprint (about 88% of automatic rolls at 1–3 rows, none
+  over five rows without `--height`) when adding engines or forms; check it with a
+  500-seed histogram and uncurated Ghostty batches, not curated favorites.
 - Compact prompt geometry must attach to the label or input roles, stay in 1–3
   rows, and preserve readable text and command-entry space. Keep the larger
   assembly and network engines available and covered by recipe regression tests.

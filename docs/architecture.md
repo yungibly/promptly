@@ -39,8 +39,20 @@
   generates independent recursive pieces, optionally links eligible neighbors,
   and decorates them. Version 7 compacts reserved regions rather than painted
   occupancy so local rerolls retain placement and intentional empty cells.
-- `src/gallery.js`: balances engine representation, then deterministically selects
-  distant specimens using geometric features;
+- `src/systems/`: the version-8 generative systems (`field`, `tiles`,
+  `automaton`, `growth`, `plot`), their shared raster medium, the compact
+  one-to-three-row forms, live-role staging, and `texture.js`, the small
+  textures and rhythms that the compact composer also uses.
+- `src/measure.js`: rasterizes a flattened design at the 79-cell planning width
+  into occupancy, live-role, glyph, and ink grids. Gallery signatures and the
+  quality score share it.
+- `src/quality.js`: a cheap coherence score (stray text-like glyphs, thin rows,
+  scattered specks, tall sparse art, one dominant component), meaningful only
+  between designs of the same engine. `curate` keeps the first candidate's
+  engine and returns its best-scoring seed, so curation never shifts the mix.
+- `src/gallery.js`: drops each engine's weakest 40% by quality, balances engine
+  representation, gives tall specimens (over three rows) only their pool share,
+  then deterministically selects distant specimens using geometric features;
   palettes and alphabets do not substitute for different silhouettes.
 - `src/compose.js`: the network generator. Starts with a seeded route and recursively
   rewrites its segments using detour, loop, branch, fork, stitch, and repeat. The
@@ -405,18 +417,11 @@ compact first row with input on the second; smaller widths use only the input ma
 opts out, and `--info` can add live fields when loading an older recipe. This
 changes displayed information without adding shell hooks or a runtime renderer.
 
-`docs/surfaces.png` and `docs/possibilities.png` show focused and mixed Ghostty
-galleries. `docs/shapes.png` records the earlier version-5 contour experiment.
-`docs/relations.png` and `docs/relations-normalized.png` compare the same twelve
-consecutive seeds with natural and fixed colors. `docs/capsules-v6.png` separately
-checks fresh horizontal half-circle caps; it is not part of that uncurated batch.
-The release audit also records `slot-machine/1` through `/24` in
-`docs/defaults-1.png` through `docs/defaults-4.png`, with matching `-normalized`
-captures. These invoke the CLI with only a seed: no engine, complexity, height,
-weight, color, or glyph override. Keep the whole consecutive batch, including
-random streaks. A short batch need not contain every engine; check reachability
-over the wider fixed pool. `docs/default-extremes-1.png` and `-2.png` supplement
-that batch with objective extrema from 256 seeds, labeled by selection criterion.
+`docs/defaults.png`, `docs/compact.png`, `docs/systems.png`, and `docs/tall.png`
+are Ghostty captures of consecutive, uncurated seeds (the username is replaced by
+a stand-in). Keep whole consecutive batches, including random streaks, when
+judging a change; check reachability over a wider fixed pool. A short batch need
+not contain every engine.
 Visual review must compare fixed-color specimens as well as natural colors:
 changing hue must not disguise repeated compositions. Check filled-space preservation,
 contrasting text, readable paths, balanced empty space, and clear command entry as
@@ -511,9 +516,9 @@ A review of 24 uncurated specimens found that large prompts were sums of many
 small independent choices: they differed statistically but looked alike, and art
 avoided the text instead of relating to it. The five systems in `src/systems/`
 each commit a prompt to one idea with a wide parameter range. They are v8-only
-engines in `src/engines.js` (tiles 1, field 0.9, automaton 0.9, plot 0.7,
-growth 0.5 against 1 for each older family), so they are about half of automatic
-sampling while every earlier family stays reachable.
+engines in `src/engines.js`; with the footprint weights below they make up a
+little over half of automatic sampling while every earlier family stays
+reachable.
 
 - `raster.js` is the shared medium. A system paints a grid of `{ ch, fg, bg }`
   cells, optionally through sub-cell buffers: half-blocks (two square pixels per
@@ -610,82 +615,26 @@ capture could not draw U+27D0/U+27E1, so replace those with supported diamonds.
 
 ## Next experiments
 
+- Prompt scale is the default bar: new ideas should first work at one to three
+  rows next to live text, then scale up. Judge them in uncurated batches.
+- Braille growth and one-row braille traces read as fine dotted lines. A
+  brighter or thicker one-row trace would let growth and plot carry more weight.
+- Right-aligned hugging (padding before the value) would let one-row prompts end
+  in art instead of a leader.
 - Additional transforms: arbitrary rotations with terminal aspect correction,
   nonlinear deformation, and multiple scales of recursive spatial subdivision.
-- Richer texture/raster bases and interactions between existing operators. Do not couple
-  these to named whole-prompt templates or universal connecting strokes.
-- A terminal exploration interface that supports keeping and mutating specimens.
-- Color-area balancing and dark/light adaptation for unfilled artwork; preserve
+- Color-area balancing and light-theme adaptation for unfilled artwork; preserve
   the generated role relationships and existing text contrast guarantees.
 - Optional slow variation per prompt, only if exported runtime stays self-contained
   and stable during editing. Do not add background animation or shell indicators.
-- If a future recipe gains custom text/glyph input, implement real terminal cell
-  width and safe truncation first. Current glyphs are deliberately curated.
 
 Primary references: [zsh prompt expansion](https://zsh.sourceforge.io/Doc/Release/Prompt-Expansion.html)
 and [tui-test CLI](https://github.com/microsoft/tui-test#cli-reference).
 
-## First visual baseline
+## Constraints
 
-`docs/gallery.png` is the real Ghostty-backend capture of `first-contact/1` through
-`first-contact/5`, at 120 columns and complexity 5. The tracked signal example
-uses complexity 3 for a shorter everyday version; the gallery deliberately shows
-the maximum ornament budget. The first release passes 14 generator/runtime tests
-and 68 terminal assertions. Captures and the machine-readable terminal report are
-regenerated under `artifacts/terminal/` by `npm run test:terminal`.
-
-## Primitive engine baseline
-
-`docs/primitives.png` captures five `possibility` descendants, complexity 7 and
-height 6, with independently seeded surfaces. `examples/network.json` preserves
-the first descendant's natural 12-row version. The primitives release adds
-replayable growth, recursive ornaments, real junctions, trait controls, scoped
-mutation, and version-2 recipes. This baseline passes 25 generator/runtime tests
-and 77 Ghostty terminal assertions, including resize and ASCII rendering of the new
-engine. The property tests replay 64 structurally distinct connected derivations.
-
-## Spatial assembly baseline
-
-`docs/assembly.png` is the actual Ghostty capture of six geometrically selected
-`possibility` descendants at complexity 8, 120 columns, and their natural row
-budgets. It includes sparse inscriptions, repeated diagonal figures, raster
-textures, optional links, and layered independent contours. `examples/assembly.*`
-stores `possibility/43`; `examples/network.*` preserves the former default.
-
-This release passes 32 automated tests and 98 Ghostty assertions. The terminal
-suite sources all six gallery specimens as real prompts as well as rendering the
-gallery, and checks editing, wrapping, continuation, exit status, restoration,
-ASCII output, and live resize. A 256-seed complexity-8 sample includes 211 unlinked
-designs, 34 programs without strokes, 98 with texture pixels, 49 short designs
-(2–3 rows), and 79 tall ones (8+ rows). These overlapping counts are regression
-evidence for different kinds of composition, not just unique random strings.
-Reservation tests cover 128 further seeds at widths from 80 through 1000 columns.
-
-Current constraints: geometry is static, terminal-cell based, and deliberately
-angular. A high complexity budget permits recursion but does not force dense art.
+Geometry is static, terminal-cell based, and resolved at generation time.
 Fragments keep fixed local proportions as terminal gaps expand. Tiny terminals
-still use the shared compact fallback. Drastic shrink can still leave old art in
-terminal scrollback; active input remains correct, as described above.
-
-## Mixed exploration and compact prompt baseline
-
-The current `docs/possibilities.png` refreshes the mixed gallery with eight
-`possibility` specimens, complexity 8, at 120 columns. `docs/prompts.png` focuses
-on the compact engine with seed `closely`. Both are actual Ghostty-backend
-captures, regenerated with the current composer; the baseline below describes
-the original compact-engine release.
-`examples/compose.*` now stores a compact specimen (`closely/6`); the version-2
-network and version-3 assembly examples remain separate and unchanged.
-
-This release passes 38 automated tests and 111 Ghostty assertions. Added checks
-cover all three families in automatic sampling, balanced galleries, independent
-footprint/detail budgets, compact role proximity across 192 seeds, readable
-20-character inscriptions, native right prompts, surface/detail independence,
-and exact old recipe geometry. Terminal checks include single-row command entry,
-long-line wrapping, normal command execution, and six live mixed specimens.
-
-Continue expanding the space rather than treating any one engine as the answer.
-Potential next work: compose compact role geometry with bounded sections of the
-network rewrite engine; add more role-local transforms and useful cross-engine
-operators. Preserve meaningful attachment to the command line when generating
-compact prompts, while keeping detached artwork possible elsewhere in the space.
+use the shared compact fallback. A drastic shrink can leave old art in terminal
+scrollback; active input remains correct. Earlier release baselines and their
+captures live in git history.
