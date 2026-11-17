@@ -39,8 +39,12 @@ function branches(rng, { w, h, roots, blocked, complexity, spread, thick }) {
 function frost(rng, { w, h, seeds, blocked, particles, stick }) {
   const stuck = new Map(), key = (x, y) => y * w + x;
   seeds.forEach((s) => stuck.set(key(s.x, s.y), { ...s, depth: 0 }));
+  // Neighbors stay inside the canvas; a flat key must not wrap across rows.
   const near = (x, y) => {
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && stuck.has(key(x + dx, y + dy))) return stuck.get(key(x + dx, y + dy));
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if ((dx || dy) && nx >= 0 && nx < w && ny >= 0 && ny < h && stuck.has(key(nx, ny))) return stuck.get(key(nx, ny));
+    }
     return null;
   };
   const dots = [...stuck.values()];
