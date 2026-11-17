@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDesign, recipe } from '../src/design.js';
-import { signature } from '../src/gallery.js';
+import { gallery, signature } from '../src/gallery.js';
+import { engines } from '../src/engines.js';
 import { Scene, left } from '../src/scene.js';
 
 // Small complete prompts isolate a visible composition without relying on the
@@ -51,4 +52,14 @@ test('filled surfaces and thin strokes remain distinct at the same occupied coor
   const text = specimen((scene) => scene.text(0, left(10), 'x'.repeat(12), 2));
   assert.notDeepEqual(signature(filled), signature(line));
   assert.notDeepEqual(signature(line), signature(text));
+});
+
+test('default galleries show every family while tall specimens keep to their share', () => {
+  for (const seed of ['possibility', 'gallery-share']) {
+    const designs = gallery({ seed }, 12);
+    assert.deepEqual(new Set(designs.map((d) => d.engine)), new Set(Object.keys(engines)));
+    // Automatic version-8 rolls are mostly one to three rows; distance alone
+    // would fill the collection with the tallest candidates.
+    assert.ok(designs.filter((d) => d.height > 3).length <= 2, seed);
+  }
 });

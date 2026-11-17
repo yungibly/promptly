@@ -91,7 +91,7 @@ export function gallery(options, count) {
     const roomForTall = chosen.filter(tall).length < tallQuota;
     candidates.sort((a, b) => b.distance - a.distance);
     const due = ({ design }) => engineCounts[design.engine] === leastRepresented;
-    let index = candidates.findIndex((item) => due(item) && (roomForTall || !tall(item) || onlyTall.has(item.design.engine)));
+    let index = candidates.findIndex((item) => due(item) && (roomForTall || !tall(item) || (onlyTall.has(item.design.engine) && !engineCounts[item.design.engine])));
     if (index < 0) index = candidates.findIndex(due);
     chosen.push(candidates.splice(index, 1)[0]);
   }
