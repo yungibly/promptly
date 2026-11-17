@@ -47,11 +47,12 @@ const kinds = {
       return k ? (k === 8 ? { ch: ' ', bg: along(inks, x, width) } : { ch: LOWER[k], fg: along(inks, x, width) }) : null;
     }));
   },
-  // An elementary automaton, time running down: four generations in one row
-  // of braille, or two per row in half-block pixels. An anchor seeds it.
+  // An elementary automaton, time running down. One row shows two half-block
+  // generations sliced from a run that has already developed (from the
+  // anchor's span, when there is one); two rows show four, or eight in braille.
   automaton(rng, { width, rows, colors, anchor }) {
-    const fine = rows === 1 || rng.chance(0.4), sx = fine ? 2 : 1, sy = fine ? 4 : 2;
-    const w = width * sx, generations = rows * sy;
+    const fine = rows > 1 && rng.chance(0.35), sx = fine ? 2 : 1, sy = fine ? 4 : 2;
+    const w = width * sx, shown = rows * sy, warm = rows === 1 ? rng.int(6, 18) : 0;
     // An anchor seeds a span around it, so the strip reads as coming from the
     // label; a random start always keeps at least one live cell.
     const at = anchor === undefined ? null : clamp(anchor, 0, width - 1) * sx, span = Math.max(3 * sx, Math.round(w / 3));
@@ -60,13 +61,15 @@ const kinds = {
     let rule, history;
     for (let attempt = 0; attempt < 6; attempt++) {
       rule = rng.pick(anchor === undefined ? [30, 54, 60, 62, 86, 90, 106, 110, 122, 126, 150] : [18, 22, 26, 30, 60, 90, 102, 122, 126, 146, 150, 182]);
-      history = evolve(rule, init, generations);
-      const live = history.flat().filter(Boolean).length / (w * generations);
-      if (live > 0.04 && live < 0.6) break;
+      history = evolve(rule, init, warm + shown).slice(warm);
+      const live = history.flat().filter(Boolean).length / (w * shown);
+      if (live > 0.08 && live < 0.6) break;
     }
-    const inks = ramp([...bright(colors)].reverse(), Math.max(2, generations));
-    const sub = dots(generations, w);
-    history.forEach((row, g) => row.forEach((on, i) => { if (on) sub[g][i] = inks[g]; }));
+    // A slice is colored along its length; a taller strip by generation.
+    const inks = rows === 1 ? ramp(bright(colors), steps(width)) : ramp([...bright(colors)].reverse(), Math.max(2, shown));
+    const sub = dots(shown, w);
+    history.forEach((row, g) => row.forEach((on, i) => { if (on) sub[g][i] = rows === 1 ? along(inks, i / sx, width) : inks[g]; }));
+    if (!sub.flat().some(Boolean)) sub[shown - 1][at ?? 0] = inks[0];
     return fine ? braille(sub) : halfBlocks(sub);
   },
   // Quarter-arc chains: caps and cups in one row, a meander between two.
