@@ -76,20 +76,24 @@ const kinds = {
     return fine ? braille(sub) : halfBlocks(sub);
   },
   // Quarter-arc chains: caps and cups in one row, a meander between two.
-  truchet(rng, { width, rows, colors, detail }) {
+  truchet(rng, { width, rows, colors, detail, fade }) {
     const inks = ramp(bright(colors), steps(width)), cells = grid(width, rows);
     const put = (x, y, ch) => { if (x < width && cells[y]) cells[y][x] = { ch, fg: along(inks, x, width) }; };
     if (rows === 1) {
-      // Caps and cups mostly alternate, so the chain reads as one squiggle.
+      // Caps and cups strictly alternate with no gap cells, so the chain reads
+      // as one squiggle. Only whole links are placed; a fade shortens the
+      // chain by whole links instead of dithering holes into it.
+      const from = fade === 'left' || fade === 'both' ? Math.round(width * rng.next() * 0.3) : 0;
+      const to = fade === 'right' || fade === 'both' ? width - Math.round(width * rng.next() * 0.3) : width;
       let cap = rng.chance(0.5);
-      for (let x = 0; x < width;) {
-        const run = rng.int(0, detail > 0.6 ? 1 : 2);
+      for (let x = from; x < to - 1;) {
+        const run = Math.min(rng.next() < 0.7 - detail * 0.6 ? rng.int(1, 2) : 0, to - x - 2);
         put(x, 0, cap ? '╭' : '╰');
         for (let i = 1; i <= run; i++) put(x + i, 0, '─');
         put(x + run + 1, 0, cap ? '╮' : '╯');
-        x += run + 2 + (rng.chance(0.1) ? 1 : 0);
-        if (rng.chance(0.8)) cap = !cap;
+        x += run + 2; cap = !cap;
       }
+      if (!cells[0].some(Boolean)) put(0, 0, '─');
       return cells;
     }
     // One strand weaving between the top and bottom rows of the band.
@@ -116,9 +120,12 @@ const kinds = {
   // Braille waves: four dot rows per cell row, one or two strands.
   wave(rng, { width, rows, colors, anchor, detail }) {
     const h = rows * 4, w = width * 2, sub = dots(h, w), inks = ramp(brightest(colors), steps(width));
-    const strands = rng.chance(0.15 + detail * 0.5) ? 2 : 1, cycles = 1 + rng.next() * width / 8 * (0.5 + detail);
+    // One row holds a single slow strand that uses all four dot rows: each
+    // dot column connects to the previous sample, so it reads as one line.
+    const strands = rows > 1 && rng.chance(0.15 + detail * 0.5) ? 2 : 1;
+    const cycles = rows === 1 ? Math.max(0.6, Math.min(width / 10, 0.8 + rng.next() * (0.8 + detail * 1.2))) : 1 + rng.next() * width / 8 * (0.5 + detail);
     for (let s = 0; s < strands; s++) {
-      const phase = rng.next() * 6.28, amp = (h - 1) / 2 * (s ? 0.6 : 1), beat = rng.next();
+      const phase = rng.next() * 6.28, amp = (h - 1) / 2 * (s ? 0.6 : 1), beat = rows === 1 ? (rng.next(), 0) : rng.next();
       let last = null;
       for (let x = 0; x < w; x++) {
         // The swing grows away from the anchor, so the wave leaves the text.
@@ -135,6 +142,21 @@ const kinds = {
   // bloom. Two-dot stems keep them legible in a single row of braille.
   sprig(rng, { width, rows, colors, anchor, detail }) {
     const h = rows * 4, w = width * 2, sub = dots(h, w);
+    if (rows === 1) {
+      // Four dot rows cannot hold upright sprigs: one row is a vine that
+      // undulates along the strip, with paired leaves and a few buds.
+      const stem = bright(colors)[1], leaf = brightest(colors)[1], bud = colors.accents[rng.int(0, 2)];
+      const cycles = Math.max(0.6, width / (8 + rng.next() * 8)), phase = rng.next() * 6.28;
+      let last = null;
+      for (let x = 0; x < w; x++) {
+        const y = Math.round(1.5 + 1.2 * Math.sin(x / w * cycles * 6.283 + phase));
+        for (let k = Math.min(y, last ?? y); k <= Math.max(y, last ?? y); k++) sub[clamp(k, 0, 3)][x] = stem;
+        if (x % 5 === 2 && rng.chance(0.4 + detail * 0.4)) sub[y > 1 ? y - 2 : y + 2][x] = leaf;
+        if (x % 13 === 7 && rng.chance(0.5)) sub[clamp(y - 1, 0, 3)][x] = bud;
+        last = y;
+      }
+      return braille(sub, (color) => color === bud ? 2 : color === leaf ? 1 : 0);
+    }
     const stem = mix(colors.stops[1], colors.stops.at(-1), 0.4), leaf = brightest(colors)[1], bloom = colors.accents[rng.int(0, 2)];
     const count = clamp(Math.round(width / (rng.int(3, 6) * (1.4 - detail * 0.7))), 1, 12);
     for (let i = 0; i < count; i++) {
@@ -200,7 +222,8 @@ export function texture(kind, rng, { width, rows = 1, colors, ascii = false, fad
   if (!Object.hasOwn(kinds, kind)) throw new Error(`Unknown texture: ${kind}. Choose ${textureKinds.join(', ')}.`);
   if (!Number.isInteger(width) || width < 1 || !Number.isInteger(rows) || rows < 1) throw new Error('Texture width and rows must be positive integers.');
   if (!Number.isFinite(detail) || detail < 0 || detail > 1) throw new Error('Texture detail must be between 0 and 1.');
-  const cells = fadeMask(kinds[kind](rng, { width, rows, colors, anchor, detail }), fade);
+  const own = kind === 'truchet' && rows === 1;
+  const cells = fadeMask(kinds[kind](rng, { width, rows, colors, anchor, detail, fade }), own ? 'none' : fade);
   return ascii ? cells.map((line) => line.map((cell) => cell && asciiCell(cell, kind))) : cells;
 }
 
