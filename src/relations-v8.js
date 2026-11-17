@@ -291,16 +291,18 @@ export function composeRelationsV8(config) {
   // and the right accent. Ornament chooses it, so geometry never depends on it.
   const quiet = weight < 0.25;
   // Surface leans on filled material, prompt on line work. An idea is a pair:
-  // a kind that holds up in one row (ridge, dissolve, maze) and the kind for a
-  // texture two rows tall, where an automaton, a truchet meander, or a
-  // gradient band reads cleanly. Braille waves and sprigs read as grit at this
-  // scale, and a one-row gradient tail as a solid slab.
+  // a kind that holds up in one row (ridge, dissolve, a half-block automaton
+  // slice, maze) and the kind for a texture two rows tall, where a truchet
+  // meander or a gradient band reads cleanly. Braille waves and sprigs read as
+  // grit at this scale, one-row truchet as fragments, a gradient tail as a slab.
   const [idea, tall] = quiet ? [null, null] : ornament.pick(config.engine === 'prompt'
     ? [['maze', 'maze'], ['maze', 'truchet'], ['ridge', 'truchet'], ['dissolve', 'maze'], ['maze', 'gradient']]
-    : [['ridge', 'ridge'], ['dissolve', 'dissolve'], ['ridge', 'gradient'], ['dissolve', 'automaton'], ['ridge', 'automaton'], ['dissolve', 'gradient']]);
+    : [['ridge', 'ridge'], ['dissolve', 'dissolve'], ['automaton', 'automaton'], ['ridge', 'gradient'], ['dissolve', 'automaton'], ['automaton', 'gradient']]);
+  // Complexity adds texture detail without adding cells.
+  const detail = Math.min(1, Math.max(0, ((config.complexity ?? 3) - 1) / 9));
   const beat = rhythm(ornament.pick(rhythmKinds.filter((kind) => !['wave', 'chain'].includes(kind))), fork('rhythm'), { colors, ascii });
   // A gradient is brightest at its anchor; other kinds fill their canvas.
-  const strip = (key, width, { anchor } = {}) => texture(idea, fork(key), { width, rows: 1, colors, ascii, ...(idea === 'gradient' ? { anchor } : {}) })[0];
+  const strip = (key, width, { anchor } = {}) => texture(idea, fork(key), { width, rows: 1, colors, ascii, detail, ...(idea === 'gradient' ? { anchor } : {}) })[0];
   const rhythmCells = (width) => Array.from({ length: width }, (_, x) => { const glyphs = [...beat.text], ch = glyphs[x % glyphs.length]; return ch === ' ' ? null : { ch, fg: beat.ink }; });
   // Lines carry a gradient toward command entry rather than one flat ink.
   const glow = ramp([mix(colors.quiet, colors.ground, 0.2), colors.stops.at(-1)], 6);
@@ -325,7 +327,7 @@ export function composeRelationsV8(config) {
     const host = plan.clusters[near.clusters.at(-1)];
     if (textured(host) && near.clusters.length === 1) {
       const span = host.width + (byTarget.has(`tail:${host.id}`) ? plan.tails[host.line].length : 0);
-      const grid = texture(tall, fork('pair'), { width: span, rows: 2, colors, ascii });
+      const grid = texture(tall, fork('pair'), { width: span, rows: 2, colors, ascii, detail });
       twin = { host: host.id, x: host.x, strip: grid[below ? 1 : 0], canvas: grid[below ? 0 : 1] };
     }
   }
@@ -473,7 +475,7 @@ export function composeRelationsV8(config) {
   if (byTarget.has('accent')) {
     const width = ornament.int(6, 12);
     // Only solid kinds: a lone braille accent at the far edge read as noise.
-    const cells = texture(idea && !bedded ? idea : 'gradient', fork('accent'), { width, rows: 1, colors, ascii, anchor: width - 1 })[0];
+    const cells = texture(idea && !bedded ? idea : 'gradient', fork('accent'), { width, rows: 1, colors, ascii, detail, anchor: width - 1 })[0];
     for (const cell of cells) {
       const glyph = !cell ? ' ' : cell.ch === ' ' ? (ascii ? '#' : '█') : cell.ch, color = cell ? cell.fg ?? cell.bg : null;
       if (rightRuns.length && (color === null || rightRuns.at(-1).ink === color)) rightRuns.at(-1).text += glyph;
