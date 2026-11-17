@@ -48,8 +48,29 @@ export function testHugging({ tui, state, check, eventually, snapshot, output, c
     snapshot(`hugging-${leaf === '界面界面' ? 'wide' : leaf.startsWith('d%') ? 'literal' : leaf.length > 1 ? 'long' : 'short'}`);
   }
   check(ends.size >= 2, 'hugging bracket did not move with the directory length');
+
+  // Version-8 compact relations as live prompts: a leader into the cursor, an
+  // elbow, a segmented pill, a split line, a stepped line, and a rail.
+  const relations = [['live-v8/2', 'prompt'], ['live-v8/1', 'surface'], ['live-v8/3', 'surface'], ['live-v8/14', 'prompt'], ['live-v8/15', 'surface'], ['live-v8/30', 'prompt']];
+  tui('resize', '120', '24');
+  for (const [seed, engine] of relations) {
+    const compact = createDesign({ seed, engine });
+    const source = `${output}/${seed.replace('/', '-')}.zsh`;
+    writeFileSync(source, compile(compact));
+    for (const leaf of ['a', 'a-much-longer-directory/with/several/levels']) {
+      const cwd = resolve(root, leaf);
+      submit(`source ${quoteZsh(source)}; cd ${quoteZsh(cwd)}; clear`);
+      eventually(() => normalize(state().text) === normalize(preview(compact, { width: 120, color: false, cwd })), `${seed}/${leaf}: compact prompt differs from preview`);
+      check(state().cursor.x === compact.cursor && state().cursor.y === compact.scene.rows - 1, `${seed}/${leaf}: hugging moved the input anchor`);
+      tui('type', 'echo v8'); tui('wait', 'idle');
+      const background = state().colors.background;
+      check(state().cursor.x === compact.cursor + 7 && cells(compact.cursor, compact.scene.rows - 1, 7).every((cell) => cell.bg === 'default' || cell.bg === background), `${seed}: paint reached command entry`);
+      tui('key', 'press', 'Ctrl+C'); tui('wait', 'idle');
+    }
+    snapshot(`compact-v8-${seed.split('/')[1]}`);
+  }
   // Later checks run the CLI relative to the repository.
   submit(`promptly_off; cd ${quoteZsh(process.cwd())}; clear`);
   tui('resize', '120', '24');
-  console.log('PASS hugging live fields follow cd while later columns, colors, and command entry stay fixed');
+  console.log('PASS hugging live fields and version-8 compact relations follow cd while later columns, colors, and command entry stay fixed');
 }

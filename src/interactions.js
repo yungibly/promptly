@@ -70,15 +70,18 @@ function fragmentReservations(composition, row) {
 // blank masks are added as overlays; no network edge is removed or rerouted.
 export function integrateRoleBand(composition, band, config) {
   const { scene } = composition, finalRow = scene.rows - 1;
-  const offset = config.engine === 'network' ? 4 : 0;
+  // Version 8 bands hug their text inside fixed reservations, so their
+  // extent is exact; a network meets command entry only when it drew a rail.
+  const latest = config.version >= 8;
+  const offset = latest ? composition.program.inputLink?.offset ?? 0 : config.engine === 'network' ? 4 : 0;
   const rng = random(config.interactionSeed ?? config.seed, 'structure:art-role-interactions');
   const art = artworkPorts(composition);
   const body = band.scene.runs.filter((run) => run.purpose !== 'input');
   const roles = band.program.derivation.roles;
   // Reserve possible side treatments, not just the decorations painted today.
   // A changed motif or weight therefore cannot move the pinned role layout.
-  const min = Math.max(0, Math.min(...roles.map((role) => role.x)) - 2);
-  const max = Math.min(79, Math.max(...roles.map((role) => role.x + role.width)) + 2);
+  const min = Math.max(0, Math.min(...roles.map((role) => role.x)) - (latest ? 1 : 2));
+  const max = Math.min(79, Math.max(...roles.map((role) => role.x + role.width)) + (latest ? 1 : 2));
   const width = max - min;
   const mode = config.weight === 0 ? 'detached' : rng.pick(['detached', 'detached', 'attach', 'occlude', 'occlude']);
   const embedded = mode !== 'detached' && finalRow > 0;
@@ -156,7 +159,16 @@ export function integrateRoleBand(composition, band, config) {
     for (const mask of masks) scene.text(mask.row, at(mask), ' '.repeat(mask.width), 0);
     scene.fill(finalRow, left(offset), right(1), ' ', 0);
   }
-  for (const run of body) scene.runs.push({ ...run, row, x: translate(run.x) });
+  // A version-8 band inside the art loses its marker. The pad of its last
+  // live run becomes the attaching line, or goes quiet if nothing attaches.
+  const last = latest && embedded ? body.filter((run) => run.kind === 'slot').sort((a, b) => b.x.offset + b.width - a.x.offset - a.width)[0] : null;
+  if (last) {
+    const joined = attachments.some((attachment) => attachment.target === 'role-band:right');
+    const line = materials[config.material ?? 'square'][10];
+    body[body.indexOf(last)] = { ...last, pad: joined ? { text: config.glyphs === 'ascii' ? '-' : line, ink: 1 } : { text: ' ', ink: 0 } };
+    if (joined) scene.text(row, translate(plus(at({ x: max - 1 }), 0)), config.glyphs === 'ascii' ? '-' : line, 1);
+  }
+  for (const run of body) scene.runs.push({ ...run, row, x: translate(run.x), ...(run.end ? { end: translate(run.end) } : {}) });
   const input = band.scene.runs.find((run) => run.purpose === 'input');
   const inputX = embedded ? offset : input.x.offset + offset;
   scene.runs.push({ ...input, row: finalRow, x: left(inputX) });

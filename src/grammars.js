@@ -3,6 +3,7 @@ import { compose } from './compose.js';
 import { assemble } from './assembly.js';
 import { composeRelations } from './relations.js';
 import { composeRelationsV7 } from './relations-v7.js';
+import { composeRelationsV8 } from './relations-v8.js';
 import { engines } from './engines.js';
 import { field } from './systems/field.js';
 import { tiles } from './systems/tiles.js';
@@ -15,7 +16,7 @@ export const builders = { network: compose, assembly: assemble, field, tiles, au
 
 // Compact engines share the role composer; larger engines build their own art.
 export function build(config) {
-  if (engines[config.engine].compact) return (config.evolved ? composeRelationsV7 : composeRelations)(config);
+  if (engines[config.engine].compact) return (config.version >= 8 ? composeRelationsV8 : config.evolved ? composeRelationsV7 : composeRelations)(config);
   return builders[config.engine](config);
 }
 

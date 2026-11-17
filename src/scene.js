@@ -74,7 +74,7 @@ export class Scene {
     if (!Number.isInteger(width) || width < 2 || width > 96) throw new Error('Live run width must be 2–96 cells.');
     const checked = parts.map((part) => {
       if (part.role) return checkRole(part.role, part.width) && { role: part.role, width: part.width, ink: part.ink ?? 2 };
-      return { text: checkGlyphs(glyphText(part.text, this.glyphs), 16), ink: part.ink ?? 2 };
+      return { text: checkGlyphs(glyphText(part.text, this.glyphs), 24), ink: part.ink ?? 2 };
     });
     const first = checked.find((part) => part.role);
     if (!first) throw new Error('A live run needs a username or directory part.');

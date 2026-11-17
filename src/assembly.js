@@ -370,7 +370,7 @@ function assembleEvolved(config) {
   const input = expression(inputDetail, config.alphabet, 3, 2), inputText = renderExpression(input);
   scene.text(outputRows, left(), label, 2).text(outputRows, left(label.length + 1), inputText, 4);
   const right = expression(inputDetail, config.alphabet, 11, 4);
-  const rightPrompt = random(layoutSeed, 'structure:assembly:right').chance(0.65) ? renderExpression(right) : '';
+  const rightPrompt = random(layoutSeed, 'structure:assembly:right').chance(config.version >= 8 ? 0.1 : 0.65) ? renderExpression(right) : '';
   return {
     scene, cursor: label.length + inputText.length + 2, rightPrompt,
     program: {

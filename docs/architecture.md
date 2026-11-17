@@ -18,6 +18,8 @@
   One visual-weight budget controls paint and edges independently of complexity.
 - `src/relations-v7.js`: compatible body/accent layers, independent side ends,
   protected surface cutouts, and motifs around role intervals.
+- `src/relations-v8.js`: the version-8 compact composer. Hugging text clusters,
+  line relations, command-entry attachment, and treatments inside reservations.
 - `src/interactions.js`: structural artwork ports, protected text masks, and
   optional attachments/occlusion. Overlays never delete the underlying graph.
 - `src/motifs.js`: shared stroke rhythms with graded shortening, shifting,
@@ -115,6 +117,54 @@ The top decoration occupies a multiline left prompt canvas. The input
 row has an ordinary short left prompt and a native right prompt. This lets zsh
 handle input wrapping and hide the right ornament when typing reaches it. Nothing
 paints into the editable buffer or moves the cursor manually.
+
+## Version 8 hugging text and compact relations
+
+The uncurated version-7 review found compact prompts that were one template:
+fixed-width fields with brackets, caps, and pills at the far end of each
+reservation, so the padding inside read like a blank form. Larger engines
+ended every input row with a right-aligned ornament string, and every network
+drew the same full-width route plus a left rail into `╰──›`.
+
+Live values now hug their decoration (see the scene IR and runtime contract).
+`role-relations/3` composes text clusters rather than fields. The plan
+(`structure:relations-v8`, from `roleSeed`) shuffles roles, then relates each
+neighbor: flow into one cluster with a tight, spaced, or word joiner (`uic in
+~/x`); stand apart on the line (fixed, or width-relative when not on the input
+line); or start a new line that aligns, indents, or steps from the line above
+with a corner connector. Command entry follows the last line (marker at the
+reservation end) or starts below it: bare, aligned under the text, on a left
+rail with stubs to each line, or on an elbow hanging from the last cluster.
+`fragments` bounds clusters per line; `connectivity` biases rails, elbows, and
+steps; `spread` biases width-relative splits. Height stays a cap; empty rows go.
+
+Every cluster reserves its live widths, joiners, one lead cell before any line,
+and a small treatment allowance. Treatments must fit that allowance, and unused
+cells become pad, so weight, complexity, ornament, and color never move a field,
+a later cluster, or the input anchor (tests replay this). Connections are
+structural; at weight 0 their cells stay empty. Atomic proposals
+(`structure:relations-v8:treatments`, ranked by `:preference`) compete for one
+fill/edge/treatment budget: bare (a real competitor), bracket (one family per
+prompt; nested brackets use a distinct one; sockets where a line meets them),
+pill (independent flat, half-block, or round ends), segmented pill (per-item
+surfaces with a transition), tag, edge, item-level accents inside unfilled
+clusters, leaders, and an occasional motif rule in a spare row. Leaders are one
+line, dot, or motif-cut rhythm per prompt and continue in phase across gaps. A
+multi-row follow budget usually stacks a line above command entry; a path before
+the cursor strongly prefers one so its slack never reads as a form field.
+Corridors to width-relative clusters stay empty. The prompt engine spends less
+on fill and more on line work than surface.
+
+Assembly and network bands are one-line plans from the same composer. Their
+extent is exact. Inside the art the marker moves to the input row, and the last
+cluster's pad becomes the attaching line when the art connects on the right, or
+goes quiet. Version 8 networks draw the left rail to command entry only
+sometimes. The rail moves the band, so it is a layout choice drawn from the
+interaction seed (`structure:network:input`, recorded as `program.inputLink`)
+and survives art rerolls under a layout pin; a railed route starts at the left
+edge, other first routes start and end at sampled extents. Right
+prompt ornaments appear in about one in ten assembly or network prompts. The
+28–79 column fallback flows the path after the name.
 
 ## Runtime contract
 

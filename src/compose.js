@@ -207,12 +207,20 @@ export function compose(config) {
   const reservations = [{ x: 1, right: labelEnd, y: labelRow, bottom: labelRow }];
   const graph = new Network(planningWidth, artHeight, reservations);
   const startRow = rng.int(1, Math.max(1, artHeight - 2));
-  const spine = [p(0, startRow)];
-  let x = 0, y = startRow;
-  while (x < planningWidth - 1) {
-    x = Math.min(planningWidth - 1, x + rng.int(5, 12));
+  // Version 8: command entry meets the graph only sometimes, and the first
+  // route need not span the lattice. The rail moves the live band, so it is
+  // a layout choice (interaction seed); a railed route starts at the edge.
+  const latest = config.version >= 8;
+  const rail = !latest || random(config.interactionSeed ?? config.seed, 'structure:network:input').chance(0.3);
+  const extent = latest ? random(config.artSeed ?? config.seed, 'structure:network:extent') : null;
+  const first = !rail && extent.chance(0.35) ? extent.int(2, Math.floor(planningWidth / 3)) : 0;
+  const last = extent && symmetry !== 'mirror' && extent.chance(0.35) ? extent.int(Math.ceil(planningWidth * 2 / 3), planningWidth - 2) : planningWidth - 1;
+  const spine = [p(first, startRow)];
+  let x = first, y = startRow;
+  while (x < last) {
+    x = Math.min(last, x + rng.int(5, 12));
     spine.push(p(x, y));
-    if (x < planningWidth - 1) {
+    if (x < last) {
       y = rng.int(1, Math.max(1, artHeight - 2));
       spine.push(p(x, y));
     }
@@ -245,21 +253,26 @@ export function compose(config) {
   const scene = new Scene(height, glyphs);
   const xAnchor = compileNetwork(network, scene, cols, material);
   // Connect the safe input row to the generated graph as a separate small path.
-  scene.wire({ row: startRow, x: xAnchor(0) }, { row: height - 1, x: xAnchor(0) }, 1, materials[material]);
-  scene.wire({ row: height - 1, x: xAnchor(0) }, { row: height - 1, x: left(3) }, 1, materials[material]);
+  if (rail) {
+    scene.wire({ row: startRow, x: xAnchor(0) }, { row: height - 1, x: xAnchor(0) }, 1, materials[material]);
+    scene.wire({ row: height - 1, x: xAnchor(0) }, { row: height - 1, x: left(3) }, 1, materials[material]);
+  }
+  const inputX = rail ? 4 : 0;
   const annotationResult = annotations(network, scene, { ...config, cols, labelRow }, ornament, xAnchor);
   const placements = config.evolved ? annotationResult.placements : annotationResult;
   const inputExpression = expression(ornament, alphabet, 3, 2);
   const input = renderExpression(inputExpression);
-  scene.text(height - 1, left(4), input, 4);
+  scene.text(height - 1, left(inputX), input, 4);
   const rightExpression = expression(ornament, alphabet, 9);
-  const rightPrompt = renderExpression(rightExpression);
+  // A right-aligned ornament on every input row read as a preset; version 8
+  // keeps it as an occasional accent.
+  const rightPrompt = !latest || random(config.artSeed ?? config.seed, 'structure:network:right').chance(0.1) ? renderExpression(rightExpression) : '';
   const componentCount = network.components();
   return {
-    scene, cursor: input.length + 5, rightPrompt,
+    scene, cursor: input.length + inputX + 1, rightPrompt,
     program: {
       engine: 'graph-rewrite/1', lattice: { columns: cols, planningColumns: planningWidth, rows: artHeight },
-      reservations,
+      reservations, ...(latest ? { extent: { first, last }, inputLink: { kind: rail ? 'rail' : 'none', offset: inputX } } : {}),
       traits: { material, alphabet, symmetry, density: config.density, weights },
       derivation, annotations: placements, input: inputExpression, right: rightExpression,
       ...(config.evolved ? { annotationPlan: annotationResult.plan, motif: annotationResult.motif } : {}),

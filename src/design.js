@@ -107,14 +107,14 @@ export function createDesign(options = {}) {
     label: engines[engine].compact || engines[engine].since >= 8 ? label : label || 'username',
     rng: random(config.artSeed ?? seed, 'structure:compose'), ornament: random(config.ornamentSeed ?? seed, 'ornament:compose') };
   let composition = build(context);
-  if (info && engines[engine].band) composition = withRoleBand(composition, { ...config, colors, evolved });
+  if (info && engines[engine].band) composition = withRoleBand(composition, { ...config, colors, evolved, version });
   if (glyphs === 'ascii') composition.rightPrompt = ascii(composition.rightPrompt);
   return {
     version,
     ...config,
     colors,
     ...composition,
-    compact: info ? compactIdentity(glyphs) : compact({ glyphs, label, sigil: '◈' }),
+    compact: info ? compactIdentity(glyphs, version) : compact({ glyphs, label, sigil: '◈' }),
   };
 }
 
