@@ -162,11 +162,15 @@ room before any paint: a tail of 6–16 cells past a line's last reservation
 (never on the input line, after a split, or where an elbow or step leaves), and
 a strip row above or below the text when the height budget has a row to spare.
 Each prompt has one idea, chosen from the ornament stream: a pair of a kind that
-holds up in one row (surface: ridge, dissolve, a half-block automaton slice;
-prompt: maze, ridge, dissolve) and a kind for a texture two rows tall (a truchet
-meander, a gradient band, an automaton). Braille waves and sprigs read as grit
-at prompt scale, one-row truchet as fragments, and a one-row gradient tail as a
-slab, so none are used. Texture stays outside related text: a tail, or a leader
+holds up in one row and a kind for a texture two rows tall. Surface uses filled
+material: ridge and dissolve, and an occasional half-block automaton slice set
+back toward the ground so it stays texture rather than a second subject, with
+automata and gradient bands two rows tall. Prompt uses line work: a gapless
+truchet chain, a single-strand wave, a vine, and maze (kept near a fifth so
+slashes never become the look), with ridge and dissolve as accents and a
+truchet meander two rows tall. A one-row gradient reads as a slab, so it
+appears only as a bed or a surface band.
+Texture stays outside related text: a tail, or a leader
 into command entry; a gap between clusters of one line keeps a quiet rhythm. A
 strip beside a textured canvas is the same texture two rows tall, so a strip
 and a tail read as one gesture. Below weight 0.25 the idea is a single quiet
