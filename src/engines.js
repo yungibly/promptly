@@ -8,6 +8,12 @@ export const engines = {
   prompt: { rows: [1, 3], heights: [1, 2, 2, 3], controls: true, compact: true, weight: 1, since: 6 },
   assembly: { rows: [2, 12], heights: [2, 3, 4, 6, 8, 12], controls: true, band: true, weight: 1, since: 6 },
   network: { rows: [4, 12], heights: [4, 4, 5, 6, 8, 12], controls: false, band: true, weight: 1, since: 6 },
+  // Version-8 systems: one generative idea each, placing their own live text.
+  field: { rows: [1, 8], heights: [1, 2, 3, 3, 4, 5, 6, 8], controls: true, weight: 0.9, since: 8 },
+  tiles: { rows: [2, 8], heights: [2, 3, 3, 4, 5, 6, 8], controls: true, weight: 1, since: 8 },
+  automaton: { rows: [2, 8], heights: [2, 3, 3, 4, 5, 6, 8], controls: true, weight: 0.9, since: 8 },
+  growth: { rows: [3, 8], heights: [3, 3, 4, 4, 5, 6, 8], controls: true, weight: 0.5, since: 8 },
+  plot: { rows: [1, 8], heights: [1, 2, 3, 4, 5, 6, 8], controls: true, weight: 0.7, since: 8 },
 };
 
 export const engineNames = () => Object.keys(engines);

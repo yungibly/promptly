@@ -104,7 +104,7 @@ export function createDesign(options = {}) {
     config.fragmentSeeds = { ...fragments };
   } else if ([...COMPONENT_SEEDS, 'fragmentSeeds'].some((key) => options[key] !== undefined)) throw new Error('Component seeds require a version 7 composition.');
   const context = { ...config, colors, modern: true, evolved, version, info,
-    label: engines[engine].compact ? label : label || 'username',
+    label: engines[engine].compact || engines[engine].since >= 8 ? label : label || 'username',
     rng: random(config.artSeed ?? seed, 'structure:compose'), ornament: random(config.ornamentSeed ?? seed, 'ornament:compose') };
   let composition = build(context);
   if (info && engines[engine].band) composition = withRoleBand(composition, { ...config, colors, evolved });

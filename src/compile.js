@@ -66,7 +66,9 @@ export function compile(design) {
         const style = typeof span.ink === 'object' ? span.ink : { fg: span.ink, bg: null };
         const bg = style.bg == null ? null : inkColor(style.bg);
         const preferred = style.fg === 'contrast' ? undefined : inkColor(style.fg ?? 2);
-        const fg = bg ? contrastInk(bg, preferred) : preferred ?? contrastInk('#000000');
+        // Text on a surface keeps a readable foreground. `exact` marks pixel
+        // art (a half-block's two colors), where the foreground is not text.
+        const fg = bg && !(style.exact && preferred) ? contrastInk(bg, preferred) : preferred ?? contrastInk('#000000');
         if (bg !== background) {
           color += bg ? `%K{${bg}}` : '%k';
           background = bg;

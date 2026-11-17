@@ -380,6 +380,48 @@ Galleries use the shared final-scene distance described above, including for
 assemblies. Measure after masks and overlays; raw derivation size is not a proxy
 for the amount or shape of visible art. All displayed seeds remain reproducible.
 
+## Version-8 generative systems
+
+A review of 24 uncurated specimens found that large prompts were sums of many
+small independent choices: they differed statistically but looked alike, and art
+avoided the text instead of relating to it. The five systems in `src/systems/`
+each commit a prompt to one idea with a wide parameter range. They are v8-only
+engines in `src/engines.js` (tiles 1, field 0.9, automaton 0.9, plot 0.7,
+growth 0.5 against 1 for each older family), so they are about half of automatic
+sampling while every earlier family stays reachable.
+
+- `raster.js` is the shared medium. A system paints a grid of `{ ch, fg, bg }`
+  cells, optionally through sub-cell buffers: half-blocks (two square pixels per
+  cell), lower eighths (silhouettes with eight steps per row), or braille (two by
+  four square dots). `emit` coalesces equal neighbors into literal text runs for
+  fixed placement, or into fills between per-mille anchors for stretched
+  placement. A stretched logical column is exactly one cell at 80 columns and
+  widens with the terminal; `ceil(k * 1000 / 78)` anchors collapse a column at
+  only one terminal width. Ramps interpolate palette colors in OKLCH.
+- `stage.js` places the live roles and the input marker. Systems read role
+  rectangles as windows, obstacles, valleys, or sources, and paint slots last.
+- `field`: layered horizons whose valley opens under the text (mirror symmetry
+  becomes a dotted reflection), braille ripples from the text, or a sparkline.
+- `tiles`: marching-squares contours over smooth fields with the text on a
+  plateau (lines ring it, never cross it), optional hypsometric tint, or 10-PRINT.
+- `automaton`: elementary rules from the text, the marker, or a random row;
+  degenerate rules (a solid bar, or extinction) are rejected from the same stream.
+- `growth`: braille vines that glance off the canvas edges, or half-block
+  diffusion-limited aggregation that rises toward the text and stops at it.
+- `plot`: hidden-line ridgelines, harmonograph orbits, oscilloscope traces.
+
+Streams: `structure:<engine>` (artSeed) owns geometry, `structure:<engine>:layout`
+(layoutSeed) owns text placement, `material:<engine>` owns ramps and render
+choices, and `ornament:<engine>` owns the marker glyph and blooms, so an ornament
+mutation and a color reseed keep the derivation. Pixel art uses an `exact` ink:
+the compiler keeps a half-block's two colors instead of forcing text contrast.
+ASCII mode maps braille by dot count (`.`, `:`, `#`); all other glyphs reuse the
+existing table, so earlier exports are unchanged.
+
+Ghostty draws eighth blocks with fractional pixel heights at some font sizes,
+which can leave a one-pixel seam where two colored layers meet. Single-eighth
+slivers are snapped to the neighboring row to keep the seams rare.
+
 ## Network engine mechanics (version 2)
 
 Plan on a 41-column logical lattice with 3–11 artwork rows and a separate safe

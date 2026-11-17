@@ -6,9 +6,10 @@ import { createDesign, fromRecipe, recipe, mutateDesign } from '../src/design.js
 import { compile } from '../src/compile.js';
 import { preview } from '../src/preview.js';
 import { gallery } from '../src/gallery.js';
+import { engines as table } from '../src/engines.js';
 
 test('automatic sampling retains all procedural engines and freezes the resolved recipe', () => {
-  const counts = { surface: 0, prompt: 0, network: 0, assembly: 0 }, heights = new Set();
+  const counts = Object.fromEntries(Object.keys(table).map((engine) => [engine, 0])), heights = new Set();
   for (let i = 0; i < 120; i++) {
     const design = createDesign({ seed: `all-possibilities/${i}`, complexity: 8 });
     counts[design.engine]++;
@@ -18,9 +19,12 @@ test('automatic sampling retains all procedural engines and freezes the resolved
     assert.equal(design.engine, simple.engine);
     assert.equal(design.height, simple.height, 'complexity must not force a larger footprint');
   }
-  for (const count of Object.values(counts)) assert.ok(count >= 20);
+  // Every family stays reachable; the version-8 systems are about half.
+  for (const count of Object.values(counts)) assert.ok(count >= 3);
+  const fresh = Object.keys(table).filter((engine) => table[engine].since === 8).reduce((sum, engine) => sum + counts[engine], 0);
+  assert.ok(fresh > 40 && fresh < 80, `version-8 systems sampled ${fresh} of 120`);
   for (const height of [1, 2, 3, 4, 6, 8, 12]) assert.ok(heights.has(height));
-  assert.ok(['surface', 'prompt'].includes(createDesign({ seed: 'single', height: 1 }).engine));
+  assert.equal(table[createDesign({ seed: 'single', height: 1 }).engine].rows[0], 1);
   for (let i = 0; i < 20; i++) {
     const low = createDesign({ seed: `constraints/${i}`, height: 2 });
     assert.notEqual(low.engine, 'network');
@@ -34,7 +38,8 @@ test('automatic sampling retains all procedural engines and freezes the resolved
 test('mixed galleries balance families rather than replacing the earlier visual directions', () => {
   const options = { seed: 'whole-range', complexity: 9 };
   const designs = gallery(options, 12);
-  for (const engine of ['surface', 'prompt', 'assembly', 'network']) assert.equal(designs.filter((d) => d.engine === engine).length, 3);
+  // Twelve specimens over nine families: each appears once before any repeats.
+  for (const engine of Object.keys(table)) assert.ok([1, 2].includes(designs.filter((d) => d.engine === engine).length), engine);
   const seeds = designs.map((d) => d.seed);
   assert.deepEqual(gallery(options, 12).map((d) => d.seed), seeds);
   assert.deepEqual(gallery({ ...options, palette: 'ember', glyphs: 'ascii' }, 12).map((d) => d.seed), seeds);
