@@ -14,6 +14,8 @@ const steps = (width) => clamp(Math.round(width / 3), 3, 12);
 // Equal colors coalesce into runs, so ramps are quantized along the width.
 // Thin strokes (braille, single lines) stay in the luminous half of the ramp.
 const bright = (colors) => [colors.stops[1], colors.stops.at(-1), mix(colors.stops.at(-1), colors.text, 0.35)];
+// Single-dot braille strokes need the lightest inks to read at all.
+const brightest = (colors) => [colors.stops.at(-1), mix(colors.stops.at(-1), colors.text, 0.45)];
 const along = (inks, x, width) => inks[clamp(Math.floor(x / width * inks.length), 0, inks.length - 1)];
 const dots = (h, w) => grid(w, h);
 
@@ -50,9 +52,11 @@ const kinds = {
   automaton(rng, { width, rows, colors, anchor }) {
     const fine = rows === 1 || rng.chance(0.4), sx = fine ? 2 : 1, sy = fine ? 4 : 2;
     const w = width * sx, generations = rows * sy;
-    const init = Array.from({ length: w }, () => anchor === undefined && rng.chance(0.4) ? 1 : 0);
-    // An anchor seeds one cell; a random start always keeps at least one.
-    if (anchor !== undefined || !init.includes(1)) init[anchor === undefined ? rng.int(0, w - 1) : clamp(anchor, 0, width - 1) * sx] = 1;
+    // An anchor seeds a span around it, so the strip reads as coming from the
+    // label; a random start always keeps at least one live cell.
+    const at = anchor === undefined ? null : clamp(anchor, 0, width - 1) * sx, span = Math.max(3 * sx, Math.round(w / 3));
+    const init = Array.from({ length: w }, (_, i) => (at === null || Math.abs(i - at) <= span / 2) && rng.chance(at === null ? 0.45 : 0.55) ? 1 : 0);
+    if (!init.includes(1)) init[at ?? rng.int(0, w - 1)] = 1;
     let rule, history;
     for (let attempt = 0; attempt < 6; attempt++) {
       rule = rng.pick(anchor === undefined ? [30, 54, 60, 62, 86, 90, 106, 110, 122, 126, 150] : [18, 22, 26, 30, 60, 90, 102, 122, 126, 146, 150, 182]);
@@ -102,7 +106,7 @@ const kinds = {
   },
   // Braille waves: four dot rows per cell row, one or two strands.
   wave(rng, { width, rows, colors, anchor }) {
-    const h = rows * 4, w = width * 2, sub = dots(h, w), inks = ramp(bright(colors), steps(width));
+    const h = rows * 4, w = width * 2, sub = dots(h, w), inks = ramp(brightest(colors), steps(width));
     const strands = rng.chance(0.35) ? 2 : 1, cycles = 1 + rng.next() * width / 8;
     for (let s = 0; s < strands; s++) {
       const phase = rng.next() * 6.28, amp = (h - 1) / 2 * (s ? 0.6 : 1), beat = rng.next();
@@ -122,12 +126,14 @@ const kinds = {
   // bloom. Two-dot stems keep them legible in a single row of braille.
   sprig(rng, { width, rows, colors, anchor }) {
     const h = rows * 4, w = width * 2, sub = dots(h, w);
-    const stem = mix(colors.stops[0], colors.stops[1], 0.6), leaf = bright(colors)[1], bloom = colors.accents[rng.int(0, 2)];
+    const stem = mix(colors.stops[1], colors.stops.at(-1), 0.4), leaf = brightest(colors)[1], bloom = colors.accents[rng.int(0, 2)];
     const count = clamp(Math.round(width / rng.int(3, 6)), 1, 10);
     for (let i = 0; i < count; i++) {
-      const base = anchor === undefined ? Math.round((i + 0.2 + rng.next() * 0.6) * w / count) : clamp(anchor * 2 + rng.int(-w / 4, w / 4), 0, w - 2);
+      // Sprigs spread across the strip; with an anchor they are tallest there.
+      const base = Math.round((i + 0.2 + rng.next() * 0.6) * w / count);
       let x = base, lean = (rng.next() - 0.5) * 0.5, side = rng.chance(0.5) ? 1 : -1;
-      const tall = rng.int(Math.max(2, h - 3), h);
+      const near = anchor === undefined ? 1 : 1 - clamp(Math.abs(base / 2 - anchor) / width) * 0.7;
+      const tall = Math.max(2, Math.round(rng.int(Math.max(2, h - 3), h) * near));
       for (let y = h - 1; y >= h - tall; y--) {
         x = clamp(x + lean, 0, w - 2); lean += (rng.next() - 0.5) * 0.25;
         const cx = Math.round(x);
