@@ -58,7 +58,9 @@
   A hugging slot (`slot(..., options)` or the compound `live(row, x, width, parts,
   pad)`) draws literal glyphs right after each live value and pads only the rest
   of its reservation with a pad glyph or pattern, so brackets, caps, and leaders
-  follow the text while later columns stay fixed.
+  follow the text while later columns stay fixed. A textured pad is a strip as
+  long as the reservation with one ink per glyph: the text covers its start and
+  the rest is revealed wherever the text ends.
   Ink can be a palette index or a foreground/background pair. Later text overpaints
   wires, including spaces; spaces with a background are occupied artwork.
 - `src/flatten.js`: resolve ordered overlays and wire junctions into colored spans
@@ -72,7 +74,8 @@
   when overlapping anchors produce many width transitions; older source stays exact.
 - `src/runtime.zsh`: small installation/undo wrapper for those strings. Native
   parameter expansion selects the width case and pads its gaps without a fork.
-- `src/preview.js`: executes the same source in `zsh -f`; no separate art renderer.
+- `src/preview.js`: executes the same source in `zsh -f`, including the right
+  prompt; no separate art renderer.
 - `bin/promptly.js`: human/agent CLI, JSON recipes, preview, mutation, export.
 
 ## Version 7 component composition and exploration
@@ -148,12 +151,28 @@ fill/edge/treatment budget: bare (a real competitor), bracket (one family per
 prompt; nested brackets use a distinct one; sockets where a line meets them),
 pill (independent flat, half-block, or round ends), segmented pill (per-item
 surfaces with a transition), tag, edge, item-level accents inside unfilled
-clusters, leaders, and an occasional motif rule in a spare row. Leaders are one
-line, dot, or motif-cut rhythm per prompt and continue in phase across gaps. A
-multi-row follow budget usually stacks a line above command entry; a path before
-the cursor strongly prefers one so its slack never reads as a form field.
-Corridors to width-relative clusters stay empty. The prompt engine spends less
-on fill and more on line work than surface.
+clusters, leaders, tails, a strip row, a gradient bed, and a right accent. A
+path before the cursor strongly prefers a leader so its slack never reads as a
+form field. Corridors to width-relative clusters stay empty.
+
+Interest comes from material, not size. Each reservation is a canvas: its
+slack reveals one texture strip (`src/systems/texture.js`, anchored to the
+cluster's first cell) behind and after the text. The plan sets aside texture
+room before any paint: a tail of 6–16 cells past a line's last reservation
+(never on the input line, after a split, or where an elbow or step leaves), and
+a strip row above or below the text when the height budget has a row to spare.
+Each prompt has one idea, chosen from the ornament stream: a texture kind
+(surface leans on ridge, automaton, and dissolve; prompt on wave, truchet, and
+maze) shared by its leaders, tails, strip, and accent, or for weight below 0.25
+a single quiet rhythm. A bed (a truecolor gradient plate whose left edge
+dithers out of the terminal, hugging the text and glowing into command entry or
+ending a few cells past the text in a dithered edge) is then the idea, and
+other canvases keep the rhythm; a bed and a strip never share a prompt. Elbows,
+steps, and rails carry a gradient toward command entry. The right accent (6–12
+cells, `design.rightRuns`, one ink per run) is proposed for about three in ten
+prompts. Any nonzero weight affords one gesture; weight 0 stays bare. Texture
+inks are literal colors from `raster.palette`, so explorer color rerolls change
+them while geometry holds.
 
 Assembly and network bands are one-line plans from the same composer. Their
 extent is exact. Inside the art the marker moves to the input row, and the last
@@ -179,7 +198,9 @@ condition for column N paints exactly that cell. Hugging runs emit each value
 parts, then conditions from the run's minimum printed width to its end. Each
 part contributes at least one cell; truncation widths exclude the literal parts.
 Pad glyphs are escaped for the conditional (`%%`, `%)`, and a `,` separator for
-`.`). zsh counts cells only in a UTF-8 locale, as for all Unicode art.
+`.`). A textured pad puts each cell's color escapes inside its own condition,
+since any condition may be the first to print, then forgets the tracked color.
+zsh counts cells only in a UTF-8 locale, as for all Unicode art.
 There are no drawing loops, prompt callbacks, redraw widgets, signal traps, or
 command substitutions. zsh's own SIGWINCH prompt expansion immediately recalculates
 the gaps, so resizing does not need a cached canvas or a shell subprocess.

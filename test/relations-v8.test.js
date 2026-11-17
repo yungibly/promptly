@@ -55,7 +55,8 @@ test('every version-8 compact prompt keeps rows, reservations, and command entry
         assert.ok(last.every((span) => !(typeof span.ink === 'object' && span.ink.bg != null && span.to.offset > design.cursor)), `${design.seed}: fill reached command entry`);
         for (const span of rows.flat().filter((span) => span.role)) assert.ok(span.to.at || span.to.offset <= width, `${design.seed}: reservation beyond ${width}`);
       }
-      if (glyphs === 'ascii') assert.ok(design.scene.runs.every((run) => /^[\x20-\x7e]*$/.test(run.text) && (!run.parts || run.parts.every((part) => !part.text || /^[\x20-\x7e]+$/.test(part.text)))), design.seed);
+      if (glyphs === 'ascii') assert.ok(design.scene.runs.every((run) => /^[\x20-\x7e]*$/.test(run.text) && (!run.parts || run.parts.every((part) => !part.text || /^[\x20-\x7e]+$/.test(part.text)))
+        && (!run.pad || /^[\x20-\x7e]+$/.test(run.pad.text))) && /^[\x20-\x7e]*$/.test(design.rightPrompt), design.seed);
     }
   }
 });
@@ -76,6 +77,28 @@ test('repairs stay within the height budget and band leaders move with their ban
       for (const width of [79, 160]) assert.ok(column(run.end, width) > column(run.x, width), `${design.seed}: fill ends before it starts`);
     }
   }
+});
+
+test('compact prompts carry one textured idea rather than bare text', () => {
+  let empty = 0, textured = 0;
+  const n = 200;
+  for (let i = 0; i < n; i++) {
+    const design = compact(`v8-texture/${i}`);
+    const { paint, traits, derivation } = design.program;
+    const ops = new Set(derivation.accepted.map((p) => p.op));
+    const canvases = paint.map((p) => p.canvas).filter(Boolean);
+    // One idea: every textured canvas shares the prompt's kind; a bed makes
+    // the bed the idea and leaves only a quiet rhythm elsewhere.
+    // An elbow is a gradient line into command entry, whatever the idea.
+    assert.ok(canvases.every((kind) => ['bed', 'elbow', traits.idea].includes(kind) || kind === 'rhythm' && ops.has('bed')), `${design.seed}: ${canvases}`);
+    if (ops.has('bed')) assert.ok(!ops.has('strip') && canvases.every((kind) => ['bed', 'rhythm', 'elbow'].includes(kind)), `${design.seed}: more than one large gesture`);
+    assert.ok([...design.rightPrompt].length <= 12, `${design.seed}: accent too long`);
+    if (design.rightRuns) assert.equal(design.rightRuns.map((r) => r.text).join(''), design.rightPrompt);
+    if (!canvases.length && !ops.has('strip') && !design.rightPrompt) empty++;
+    if (traits.idea !== 'rhythm') textured++;
+  }
+  assert.ok(empty < n * 0.05, `${empty} prompts without any deliberate idea`);
+  assert.ok(textured > n * 0.6, `${textured} textured prompts`);
 });
 
 test('weight, ornament, and color never move a version-8 field or the input anchor', () => {
@@ -102,9 +125,11 @@ test('hugging compact prompts keep their cursor while the directory changes', ()
     for (let i = 0; i < 6; i++) {
       const design = compact(`v8-live/${i}`);
       const lines = [short, long].map((cwd) => preview(design, { width: 100, color: false, cwd }).replace(/\n$/, '').split('\n'));
+      // The marker stays put; a right-prompt accent may follow on its row.
       for (const rendered of lines) {
         assert.equal(rendered.length, design.scene.rows, design.seed);
-        assert.equal([...rendered.at(-1)].length, design.cursor, `${design.seed}: input row width moved`);
+        assert.equal([...rendered.at(-1)][design.cursor - 2], design.program.annotations.marker, `${design.seed}: input marker moved`);
+        assert.equal([...rendered.at(-1)].slice(design.cursor).join('').trim(), design.rightPrompt, `${design.seed}: only the right accent follows command entry`);
       }
     }
   } finally {
