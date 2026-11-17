@@ -19,6 +19,11 @@ for (const [chars, replacement] of [
   ['≋≈∿', '~'], ['═≡', '='], ['ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ', 'x'],
   ['░▒▓█▁▂▃▄▅▆▇', '#'], ['✦✧✶✳', '*'], ['⌁', '~'], ['⊣⊢', '+'],
 ]) for (const char of chars) fallback.set(char, replacement);
+// Version-8 rasters: braille keeps its approximate density in one cell.
+for (let bits = 1; bits < 256; bits++) {
+  const dots = bits.toString(2).replaceAll('0', '').length;
+  fallback.set(String.fromCodePoint(0x2800 + bits), dots <= 2 ? '.' : dots <= 5 ? ':' : '#');
+}
 
 export const ascii = (text) => [...text].map((c) => c.codePointAt(0) < 127 ? c : fallback.get(c) ?? '*').join('');
 const glyphText = (text, mode) => mode === 'ascii' ? ascii(text) : mode === 'powerline'

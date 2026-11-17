@@ -7,7 +7,8 @@ import { compile } from '../src/compile.js';
 import { random } from '../src/random.js';
 import { engines as table } from '../src/engines.js';
 
-const engines = ['surface', 'prompt', 'assembly', 'network'];
+const engines = Object.keys(table);
+const legacy = ['surface', 'prompt', 'assembly', 'network'];
 const cli = fileURLToPath(new URL('../bin/promptly.js', import.meta.url));
 const run = (...args) => spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', timeout: 20000 });
 const unrelated = (design) => Object.fromEntries(['engine', 'height', 'weight', 'palette', 'colorSeed', 'colors', 'material', 'alphabet', 'symmetry', 'density', 'spread', 'fragments', 'connectivity'].map((key) => [key, design[key]]));
@@ -16,7 +17,7 @@ test('fresh default sampling reaches the full complexity range in every procedur
   const levels = Object.fromEntries(engines.map((engine) => [engine, new Set()]));
   const counts = Array(11).fill(0);
   let compactDetailed = false, tallSimple = false;
-  for (let i = 0; i < 480; i++) {
+  for (let i = 0; i < 720; i++) {
     const design = createDesign({ seed: `full-range/${i}` });
     assert.equal(design.version, LATEST);
     assert.ok(Number.isInteger(design.complexity) && design.complexity >= 1 && design.complexity <= 10);
@@ -46,7 +47,7 @@ test('explicit modern engines still sample complexity and footprint independentl
       assert.equal(detailed.complexity, 10);
     }
     assert.ok(levels.has(1) && levels.has(10), `${engine}: both complexity extremes`);
-    const expected = ['surface', 'prompt'].includes(engine) ? [1, 2, 3] : engine === 'assembly' ? [2, 3, 4, 6, 8, 12] : [4, 5, 6, 8, 12];
+    const expected = [...new Set(table[engine].heights)].sort((a, b) => a - b);
     assert.deepEqual([...heights].sort((a, b) => a - b), expected);
   }
 });
@@ -122,7 +123,7 @@ test('version 8 keeps legacy engine choices stable and samples only mark-like al
   for (let i = 0; i < 64; i++) {
     const seed = `engine-table/${i}`;
     const old = createDesign({ version: 7, seed });
-    assert.equal(old.engine, random(seed, 'trait:engine').pick(engines), 'v7 automatic engine moved');
+    assert.equal(old.engine, random(seed, 'trait:engine').pick(legacy), 'v7 automatic engine moved');
     const fresh = createDesign({ seed });
     assert.equal(fresh.version, LATEST);
     assert.ok(Object.hasOwn(table, fresh.engine));

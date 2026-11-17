@@ -115,7 +115,23 @@ families and select different geometries within them. Focus exploration when des
 - `--engine network`: connected recursive geometry, 4–12 rows.
 - `--engine assembly`: independently placed cell art, a 2–12 row budget.
 
-All four support complexity 1–10. `--weight 0..1` sets the live-role band's visual
+Five generative systems commit each prompt to one idea, with the live text as a
+participant rather than a passenger. Together they are about half of automatic
+sampling:
+
+- `--engine field`: layered horizons in eighth-block precision (a valley opens
+  under the text; mirror symmetry becomes a dotted lake reflection), braille ripples
+  spreading from the text, or a one-row sparkline. 1–8 rows.
+- `--engine tiles`: topographic contours by marching squares, with the text on a
+  plateau the lines ring, optionally tinted; or a diagonal 10-PRINT maze. 2–8 rows.
+- `--engine automaton`: elementary cellular automata falling from the text,
+  rising from the input marker, or streaming rightward out of it. 2–8 rows.
+- `--engine growth`: braille vines from the marker or the text, or half-block
+  coral (diffusion-limited aggregation) rising toward the text. 3–8 rows.
+- `--engine plot`: braille pen plots: hidden-line ridgelines, a harmonograph
+  orbiting the text, or an oscilloscope trace. 1–8 rows.
+
+All engines support complexity 1–10. `--weight 0..1` sets the live-role band's visual
 weight independently of complexity; zero leaves bare typography. `--height`
 restricts the eligible engines in automatic mode and sets a row budget. Compact
 compositions remove unused rows; input can follow the last text baseline or begin

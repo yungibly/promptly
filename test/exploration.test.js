@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createDesign, recipe, fromRecipe, mutateDesign, LATEST } from '../src/design.js';
 import { createExplorerState, explorerAction, explorerFragments } from '../src/exploration.js';
 import { compile } from '../src/compile.js';
+import { engines as table } from '../src/engines.js';
 
 const engines = ['surface', 'prompt', 'assembly', 'network'];
 const pin = (state, target, id) => explorerAction(state, { type: 'pin', target, id });
@@ -89,12 +90,12 @@ test('favorites preserve complete pinned discoveries, load exactly, and clear pi
 test('unrestricted rerolls retain every engine and complexity; color-only pin leaves that range open', () => {
   let state = pin(createExplorerState({ options: { seed: 'open-exploration' } }), 'colors');
   const colors = state.current.colors, families = new Set(), levels = new Set();
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 160; i++) {
     state = explorerAction(state, { type: 'reroll', seed: `explore-all/${i}` });
     families.add(state.current.engine); levels.add(state.current.complexity);
     assert.deepEqual(state.current.colors, colors);
   }
-  assert.equal(families.size, 4); assert.equal(levels.size, 10);
+  assert.equal(families.size, Object.keys(table).length); assert.equal(levels.size, 10);
 });
 
 test('legacy favorites remain viewable and shape-pinnable without upgrading their recipe', () => {

@@ -31,7 +31,7 @@ const help = `
   promptly styles                 List engines, palettes, materials, and alphabets
 
   --seed TEXT                     Repeatable seed; random when omitted
-  --engine auto|surface|prompt|assembly|network
+  --engine auto|surface|prompt|assembly|network|field|tiles|automaton|growth|plot
                                   Mixed exploration by default, or focus one engine
   --palette NAME                  generated (default), or a named color collection
   --color-seed TEXT               Resample color relationships independently
@@ -40,7 +40,7 @@ const help = `
   --material NAME                 rounded, square, double, heavy, dashed
   --alphabet NAME                 geometric, punctuation, technical, granular, runic
   --symmetry none|mirror           Reflect the composition, or keep it asymmetric
-  --height 1..12                   Row budget: surface/prompt 1–3, assembly 2–12, network 4–12
+  --height 1..12                   Row budget: surface/prompt 1–3, assembly 2–12, network 4–12, systems up to 8
   --spread 0..1                    Extent/right accents (surface, prompt, assembly)
   --fragments 1..12                Role-group/repeat or region target
   --connectivity 0..1              Chance of linking eligible neighbors (often 0)

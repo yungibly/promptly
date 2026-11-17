@@ -4,9 +4,14 @@ import { assemble } from './assembly.js';
 import { composeRelations } from './relations.js';
 import { composeRelationsV7 } from './relations-v7.js';
 import { engines } from './engines.js';
+import { field } from './systems/field.js';
+import { tiles } from './systems/tiles.js';
+import { automaton } from './systems/automaton.js';
+import { growth } from './systems/growth.js';
+import { plot } from './systems/plot.js';
 
 // Builders for engines that do not use the shared compact role composer.
-export const builders = { network: compose, assembly: assemble };
+export const builders = { network: compose, assembly: assemble, field, tiles, automaton, growth, plot };
 
 // Compact engines share the role composer; larger engines build their own art.
 export function build(config) {

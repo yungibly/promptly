@@ -159,7 +159,7 @@ try {
   check(/^[\x20-\x7e\n]*$/.test(state().text), 'ASCII prompt leaked Unicode');
   snapshot('ascii');
   const specimens = gallery({ seed: 'possibility', complexity: 8 }, 8);
-  check(['prompt', 'surface', 'network', 'assembly'].every((engine) => specimens.some((specimen) => specimen.engine === engine)), 'mixed gallery lost a procedural family');
+  check(new Set(specimens.map((specimen) => specimen.engine)).size === specimens.length, 'mixed gallery repeated a family before showing the others');
   for (const [i, specimen] of specimens.entries()) {
     const file = `${output}/specimen-${i + 1}.zsh`;
     writeFileSync(file, compile(specimen));
