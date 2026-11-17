@@ -115,21 +115,25 @@ families and select different geometries within them. Focus exploration when des
 - `--engine network`: connected recursive geometry, 4–12 rows.
 - `--engine assembly`: independently placed cell art, a 2–12 row budget.
 
+Version 8 is prompt-scale first: a design you would keep on every command.
+Automatic rolls are mostly one to three rows (two most often), about one in
+nine is four or five rows, and taller art appears when `--height` asks for it.
 Five generative systems commit each prompt to one idea, with the live text as a
-participant rather than a passenger. Together they are about half of automatic
-sampling:
+participant. At one to three rows each places a bounded piece of art (about forty
+cells at 80 columns) beside, above, or through the text, or puts the text on a
+gradient bed; taller heights keep their larger forms:
 
-- `--engine field`: layered horizons in eighth-block precision (a valley opens
-  under the text; mirror symmetry becomes a dotted lake reflection), braille ripples
-  spreading from the text, or a one-row sparkline. 1–8 rows.
-- `--engine tiles`: topographic contours by marching squares, with the text on a
-  plateau the lines ring, optionally tinted; or a diagonal 10-PRINT maze. 2–8 rows.
-- `--engine automaton`: elementary cellular automata falling from the text,
-  rising from the input marker, or streaming rightward out of it. 2–8 rows.
-- `--engine growth`: braille vines from the marker or the text, or half-block
-  coral (diffusion-limited aggregation) rising toward the text. 3–8 rows.
-- `--engine plot`: braille pen plots: hidden-line ridgelines, a harmonograph
-  orbiting the text, or an oscilloscope trace. 1–8 rows.
+- `--engine field`: ridges and dithered dissolves near the text, or the text on a
+  truecolor bed; at four rows and up, layered horizons with a valley under the
+  text (mirror symmetry adds a dotted lake), or braille ripples.
+- `--engine tiles`: quarter-arc chains and meanders or a 10-PRINT run; at four
+  rows and up, topographic contours ringing the text on a plateau.
+- `--engine automaton`: cellular automata strips seeded from the label; at four
+  rows and up, runs falling from the text or rising from the input marker.
+- `--engine growth`: sprigs and coral rising toward the text; at four rows and
+  up, braille vines from the marker and diffusion-limited coral.
+- `--engine plot`: braille waves and Lissajous loops; at four rows and up,
+  hidden-line ridgelines, harmonographs, and oscilloscope traces.
 
 All engines support complexity 1–10. `--weight 0..1` sets the live-role band's visual
 weight independently of complexity; zero leaves bare typography. `--height`

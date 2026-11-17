@@ -469,6 +469,27 @@ Galleries use the shared final-scene distance described above, including for
 assemblies. Measure after masks and overlays; raw derivation size is not a proxy
 for the amount or shape of visible art. All displayed seeds remain reproducible.
 
+## Version-8 footprint
+
+After the first version-8 systems, uncurated rolls were too often large
+graphics, and the compact ones were bare text. Version 8 now samples
+`engines[name].footprint` instead of `heights` (versions 6 and 7 still draw
+from `heights`, unchanged). The weights put network at about 9% and keep every
+family reachable. Over 500 seed-only rolls the result is roughly 88% at one to
+three rows (two rows about 44%), 12% at four or five, and none taller unless
+`--height` asks. Assembly's version-8 spread is bounded by `extent` to about
+forty cells. Explicit engines draw from the same footprint, so an explicit
+engine equal to the automatic choice still yields the same design.
+
+`src/systems/compact.js` is the primary form of every system at one to three
+rows. The layout stream chooses an arrangement (`trail`, `lead`, `beside`,
+`above`, `through`, or `bed`); the structure stream chooses the system's kind of
+art from `texture.js` or its own renderer (Lissajous loops, half-block coral).
+Art is bounded and attached to the text; `through` knocks the text out with a
+one-cell halo, and `bed` gives each live field the bed's color under it. At four
+or five rows, horizons and automata stay within about fifty cells; their
+full-width forms need six rows or more.
+
 ## Version-8 generative systems
 
 A review of 24 uncurated specimens found that large prompts were sums of many

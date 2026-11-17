@@ -2,6 +2,7 @@ import { Scene } from '../scene.js';
 import { random } from '../random.js';
 import { ramp, palette, halfBlocks, braille, emit, fixed, clamp, occupied, grid } from './raster.js';
 import { roles, line, paint, marker } from './stage.js';
+import { compact } from './compact.js';
 
 // Elementary cellular automata. Time runs away from a source: down from the
 // live text, up from the input marker, or rightward out of the text. Even
@@ -22,6 +23,8 @@ export function evolve(rule, init, generations, wrap = false) {
 }
 
 export function automaton(config) {
+  // One to three rows: a strip of generations, seeded where the text is.
+  if (config.height <= 3) return compact(config, 'automaton', { kinds: ['automaton'] });
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, 'structure:automaton');
   const layout = random(config.layoutSeed ?? config.seed, 'structure:automaton:layout');
@@ -35,20 +38,18 @@ export function automaton(config) {
   const fine = material.chance(0.15);
   const px = fine ? 2 : 1, py = fine ? 4 : 2;
   const rows = height - 1, inputRow = height - 1;
-  // Falling from the text needs rows below it; short bands flow sideways or up.
-  const flow = layout.pick(rows >= 3 ? ['down', 'down', 'up', 'right'] : rows === 2 ? ['up', 'right'] : ['right']);
+  const flow = layout.pick(['down', 'down', 'up', 'right']);
   // Lay out text before the automaton, so its cells are the sources.
   let cols, start = 0;
   if (flow === 'right') {
     const row = layout.int(0, rows - 1);
     start = line(text, row, 1) + 2;
-    cols = layout.int(Math.min(79 - start, 24), 79 - start);
-  } else if (flow === 'down') {
-    line(text, 0, layout.pick([1, 2, 4]));
-    cols = layout.int(Math.min(79, Math.max(40, textWidth + 20)), 79);
+    cols = layout.int(Math.min(79 - start, 24), height <= 5 ? Math.min(79 - start, 32) : 79 - start);
   } else {
-    line(text, inputRow, 1);
-    cols = layout.int(Math.min(79, Math.max(40, textWidth + 20)), 79);
+    // Up to five rows the strip stays near the text; taller runs may widen.
+    if (flow === 'down') line(text, 0, layout.pick([1, 2, 4]));
+    else line(text, inputRow, 1);
+    cols = layout.int(Math.min(79, Math.max(40, textWidth + 20)), height <= 5 ? Math.min(79, Math.max(40, textWidth + 24)) : 79);
   }
   const markerX = flow === 'up' ? textWidth + 3 : layout.pick([0, 0, 1]);
   // The lattice: one cell per sub-pixel column (or per sub-pixel row when time

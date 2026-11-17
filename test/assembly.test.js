@@ -27,7 +27,8 @@ test('256 assembly seeds vary silhouette, occupied medium, scale, and fragmentat
   const counts = { unlinked: 0, noStrokes: 0, texture: 0, short: 0, tall: 0, small: 0, broad: 0, single: 0, many: 0 };
   const forms = new Set();
   for (let i = 0; i < 256; i++) {
-    const design = createDesign({ engine: 'assembly', seed: `assembly/${i}`, complexity: 8 });
+    // Automatic rolls stay compact; the engine's full range is explicit.
+    const design = createDesign({ engine: 'assembly', seed: `assembly/${i}`, complexity: 8, height: [2, 3, 4, 6, 8, 12][i % 6], spread: 0.2 + (i % 5) * 0.2 });
     const s = design.program.stats;
     counts.unlinked += s.links === 0; counts.noStrokes += !s.operations.stroke; counts.texture += !!s.operations.pixel;
     counts.short += design.scene.rows <= 3; counts.tall += design.scene.rows >= 8;
@@ -106,6 +107,6 @@ test('galleries select deterministic geometric variety independently of palette 
   assert.equal(new Set(seeds).size, 6);
   assert.deepEqual(gallery(options, 6).map((d) => d.seed), seeds);
   assert.deepEqual(gallery({ ...options, palette: 'ember', glyphs: 'ascii' }, 6).map((d) => d.seed), seeds);
-  assert.ok(designs.some((d) => d.scene.rows <= 3) && designs.some((d) => d.scene.rows >= 7));
+  assert.ok(new Set(designs.map((d) => d.scene.rows)).size >= 2);
   assert.ok(new Set(designs.map((d) => JSON.stringify(signature(d)))).size === designs.length);
 });

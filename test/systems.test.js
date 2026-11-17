@@ -36,9 +36,10 @@ test('live text keeps a clear margin, the input row stays empty, and the cursor 
       const roles = flatten(design, width).flatMap((spans, row) => spans.filter((s) => s.role).map((s) => ({ row, from: value(s.from, width), to: value(s.to, width) })));
       assert.equal(roles.length, design.info === false ? 0 : 2, `${engine}/${i}: live roles missing at ${width}`);
       for (const role of roles) for (const x of [role.from - 1, role.to]) {
-        const cell = rows[role.row][x];
-        // Neighbors are bare space or other text, never generated art.
-        assert.ok(!cell || cell.role || /^[ \w./~-]$/.test(cell.ch) && !(typeof cell.ink === 'object' && cell.ink.bg), `${engine}/${i}: art touches a live field at ${width}`);
+        const cell = rows[role.row][x], bed = typeof rows[role.row][role.from]?.ink === 'object';
+        // Neighbors are bare space, other text, or the bed the text sits on;
+        // never a glyph of generated art.
+        assert.ok(!cell || cell.role || /^[ \w./~-]$/.test(cell.ch) && (bed || !(typeof cell.ink === 'object' && cell.ink.bg)), `${engine}/${i}: art touches a live field at ${width}`);
       }
       const input = rows.at(-1).slice(design.cursor - 2).filter((cell) => cell && cell.ch !== ' ');
       assert.ok(input.length <= 1, `${engine}/${i}: input row is not clear`);
@@ -67,18 +68,47 @@ test('ornament and color changes keep the structural derivation', () => {
   }
 });
 
-test('each system reaches its forms, compact and tall footprints, and both text relations', () => {
+test('each system is compact first, keeps its tall forms on request, and reaches every arrangement', () => {
   for (const engine of systems) {
-    const forms = new Set(), heights = new Set();
+    const tall = new Set(), arrangements = new Set(), kinds = new Set();
     for (let i = 0; i < 64; i++) {
-      const design = createDesign({ seed: `system-reach/${engine}/${i}`, engine });
-      const { traits, derivation } = design.program;
-      forms.add(traits.form ?? traits.kind ?? traits.flow);
-      heights.add(design.scene.rows);
-      if (derivation.roles) forms.add(derivation.roles.some((r) => r.row === design.scene.rows - 1) ? 'text:input-row' : 'text:inside');
+      const sampled = createDesign({ seed: `system-reach/${engine}/${i}`, engine });
+      assert.ok(sampled.height <= 4, `${engine}/${i}: automatic height ${sampled.height}`);
+      const short = createDesign({ seed: `system-reach/${engine}/${i}`, engine, height: 1 + i % 3 });
+      assert.equal(short.program.traits.form, 'compact');
+      assert.equal(short.scene.rows, short.height);
+      arrangements.add(short.program.traits.arrangement); kinds.add(short.program.traits.kind);
+      const big = createDesign({ seed: `system-reach/${engine}/${i}`, engine, height: 4 + i % 5 });
+      tall.add(big.program.traits.form ?? big.program.traits.kind ?? big.program.traits.flow);
     }
-    assert.ok(forms.size >= 4, `${engine}: ${[...forms]}`);
-    assert.ok([...heights].some((h) => h <= 3) && [...heights].some((h) => h >= 6), `${engine}: ${[...heights]}`);
+    assert.ok(arrangements.size >= 5, `${engine}: ${[...arrangements]}`);
+    assert.ok(kinds.size >= 2 || engine === 'automaton', `${engine}: ${[...kinds]}`);
+    assert.ok(tall.size >= 2 && !tall.has('compact'), `${engine}: ${[...tall]}`);
+  }
+});
+
+test('complexity adds detail to compact art without moving it', () => {
+  for (const engine of systems) {
+    let changed = 0;
+    for (let i = 0; i < 12; i++) {
+      const options = { seed: `system-detail/${engine}/${i}`, engine, height: 1 + i % 3 };
+      const low = createDesign({ ...options, complexity: 1 }), high = createDesign({ ...options, complexity: 10 });
+      assert.deepEqual(high.program.derivation, low.program.derivation, `${engine}/${i}: complexity moved the art or text`);
+      changed += JSON.stringify(flatten(low, 80)) !== JSON.stringify(flatten(high, 80));
+    }
+    assert.ok(changed >= 9, `${engine}: complexity changed only ${changed} of 12`);
+  }
+});
+
+test('compact system art stays attached to the text and within about forty cells', () => {
+  for (const engine of systems) for (let i = 0; i < 48; i++) {
+    const design = createDesign({ seed: `system-extent/${engine}/${i}`, engine, height: 1 + i % 3 });
+    const { box } = design.program.derivation, text = design.program.derivation.roles;
+    const right = Math.max(...text.map((r) => r.x + r.width));
+    assert.ok(box.x + box.width <= right + 32, `${engine}/${i}: art reaches ${box.x + box.width}, text ends at ${right}`);
+    assert.ok(box.width - (design.program.traits.arrangement === 'through' || design.program.traits.arrangement === 'bed' ? right : 0) <= 40, `${engine}/${i}: ${box.width} cells of art`);
+    if (design.scene.rows === 1) assert.ok(design.cursor <= 50, `${engine}/${i}: cursor ${design.cursor}`);
+    assert.ok(design.program.stats.occupiedCells >= 3, `${engine}/${i}: art is a speck`);
   }
 });
 

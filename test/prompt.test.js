@@ -23,7 +23,9 @@ test('automatic sampling retains all procedural engines and freezes the resolved
   for (const count of Object.values(counts)) assert.ok(count >= 3);
   const fresh = Object.keys(table).filter((engine) => table[engine].since === 8).reduce((sum, engine) => sum + counts[engine], 0);
   assert.ok(fresh > 40 && fresh < 80, `version-8 systems sampled ${fresh} of 120`);
-  for (const height of [1, 2, 3, 4, 6, 8, 12]) assert.ok(heights.has(height));
+  // Version 8 is prompt-scale first: one to five rows, tall art only on request.
+  for (const height of [1, 2, 3, 4, 5]) assert.ok(heights.has(height));
+  assert.ok([...heights].every((height) => height <= 5));
   assert.equal(table[createDesign({ seed: 'single', height: 1 }).engine].rows[0], 1);
   for (let i = 0; i < 20; i++) {
     const low = createDesign({ seed: `constraints/${i}`, height: 2 });

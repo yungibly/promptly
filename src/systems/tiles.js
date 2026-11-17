@@ -4,6 +4,7 @@ import { materials } from '../ornaments.js';
 import { ramp, mix, palette, emit, fixed, smooth, clamp, occupied, grid } from './raster.js';
 import { fbm } from './noise.js';
 import { roles, line, clearance, paint, marker } from './stage.js';
+import { compact } from './compact.js';
 
 // Tile fields: every cell chooses a tile from local rules, and the pattern
 // emerges from neighbors agreeing. Contours use marching squares on corner
@@ -29,6 +30,8 @@ function terrain(rng, cols, rows, complexity, fragments) {
 }
 
 export function tiles(config) {
+  // One to three rows: quarter-arc chains and meanders, or a 10-PRINT run.
+  if (config.height <= 3) return compact(config, 'tiles', { kinds: ['truchet', 'truchet', 'maze'] });
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, 'structure:tiles');
   const layout = random(config.layoutSeed ?? config.seed, 'structure:tiles:layout');
@@ -39,7 +42,7 @@ export function tiles(config) {
   const text = roles(config, layout);
   const scene = new Scene(height, config.glyphs);
   const rows = height - 1, inputRow = height - 1;
-  const kind = rows >= 3 ? rng.pick(['contours', 'contours', 'contours', 'maze']) : 'maze';
+  const kind = rng.pick(['contours', 'contours', 'contours', 'maze']);
   const textWidth = text.reduce((sum, r) => sum + r.width + 2, -2);
   const cols = layout.int(Math.min(79, Math.max(44, textWidth + 18)), 79);
   const side = cols > 70 ? 'left' : layout.pick(['left', 'left', 'center', 'right']);

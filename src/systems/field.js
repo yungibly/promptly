@@ -3,15 +3,14 @@ import { random } from '../random.js';
 import { ramp, mix, palette, silhouettes, halftone, emit, stretch, fixed, smooth, clamp, occupied } from './raster.js';
 import { fbm } from './noise.js';
 import { roles, line, clearance, paint, marker } from './stage.js';
+import { compact } from './compact.js';
 
-const SPARK = '▁▂▃▄▅▆▇█';
 const contrast = (n, k = 2.2) => clamp(0.5 + (n - 0.5) * k);
 
 // Layered ridges in eighth-block precision. Far layers are drawn first; each
 // fades toward the dark ground below its crest, so land dissolves downward.
 function horizon(rng, material, { cols, rows, complexity, colors, valley }) {
-  // A short band holds one silhouette whose color travels along it.
-  const count = rows <= 2 ? 1 : 2 + Math.min(3, Math.floor(rng.next() * (1 + complexity / 2.5)));
+  const count = 2 + Math.min(3, Math.floor(rng.next() * (1 + complexity / 2.5)));
   const shape = rng.pick(['smooth', 'ridged', 'dunes', 'swell']);
   const inks = ramp(colors.stops, count + 1).slice(1);
   if (material.chance(0.5)) inks.reverse();
@@ -20,7 +19,7 @@ function horizon(rng, material, { cols, rows, complexity, colors, valley }) {
   const layers = Array.from({ length: count }, (_, i) => {
     const noise = fbm(rng, shape === 'ridged' ? 2 + Math.ceil(complexity / 3) : 2);
     const scale = cols / (shape === 'dunes' || shape === 'swell' ? 2 + rng.next() * 4 : 1.2 + rng.next() * 4), phase = rng.next() * 60;
-    const top = count === 1 ? 0 : rows * (0.02 + 0.55 * i / count), amp = count === 1 ? rows * 0.95 : rows * (0.75 - 0.35 * i / count);
+    const top = rows * (0.02 + 0.55 * i / count), amp = rows * (0.75 - 0.35 * i / count);
     const ridge = (x) => {
       let n = contrast(noise(x / scale + phase));
       if (shape === 'ridged') n = 1 - Math.abs(2 * n - 1) ** 0.8;
@@ -32,10 +31,7 @@ function horizon(rng, material, { cols, rows, complexity, colors, valley }) {
     const color = fall ? (y) => mix(inks[i], colors.ground, clamp(Math.floor(y - top) / (rows * fall / count + 1)) * 0.8) : () => inks[i];
     return { ridge, color };
   });
-  // One silhouette travels between two neighboring stops, not the whole ramp.
-  const along = count === 1 ? ramp(colors.stops.slice(-2), 10) : null;
-  return { traits: { form: 'horizon', shape, layers: count }, layersAt: (x) => layers.map((l) => ({ top: l.ridge(x),
-    color: along ? () => along[clamp(Math.floor(x / cols * 10), 0, 9)] : l.color })) };
+  return { traits: { form: 'horizon', shape, layers: count }, layersAt: (x) => layers.map((l) => ({ top: l.ridge(x), color: l.color })) };
 }
 
 // Ripples as braille halftone: density carries the wave, foreground color
@@ -53,22 +49,9 @@ function ripples(rng, { cols, rows, text }) {
   } };
 }
 
-function sparkline(scene, text, layout, rng, colors, detail) {
-  const first = layout.chance(0.7), span = text.reduce((sum, r) => sum + r.width + 2, 0);
-  // The strip ends at the input marker and leaves room to type.
-  const width = clamp(layout.int(8, 16), 6, 43 - span);
-  let x = first ? line(text, 0, 1) + 2 : 1;
-  const noise = fbm(rng, 2), scale = 1.5 + rng.next() * 4;
-  const values = Array.from({ length: width }, (_, i) => noise(i / scale));
-  const lo = Math.min(...values), hi = Math.max(...values), inks = ramp(colors.stops, width);
-  emit(scene, [values.map((v, i) => ({ ch: SPARK[Math.round((v - lo) / Math.max(1e-6, hi - lo) * 7)], fg: inks[first ? i : width - 1 - i] }))], fixed(0, x));
-  x += width + 2;
-  if (!first) x = line(text, 0, x) + 2;
-  paint(scene, text);
-  return { cursor: marker(scene, 0, x, detail), traits: { form: 'sparkline', palette: colors.family }, derivation: { width } };
-}
-
 export function field(config) {
+  // One to three rows: a ridge, a dissolve, or the text on a gradient bed.
+  if (config.height <= 3) return compact(config, 'field', { kinds: ['ridge', 'ridge', 'dissolve'], bed: true });
   const seed = config.artSeed ?? config.seed;
   const rng = random(seed, 'structure:field');
   const layout = random(config.layoutSeed ?? config.seed, 'structure:field:layout');
@@ -78,19 +61,16 @@ export function field(config) {
   const colors = palette(config.colors, material);
   const text = roles(config, layout);
   const scene = new Scene(height, config.glyphs);
-  if (height === 1) {
-    const result = sparkline(scene, text, layout, rng, colors, detail);
-    return { scene, cursor: result.cursor, rightPrompt: '', program: { engine: 'field/1', traits: result.traits, derivation: result.derivation, stats: { occupiedCells: result.derivation.width } } };
-  }
   const rows = height - 1, inputRow = height - 1;
   // The form decides the canvas and text placement, so it is a layout choice.
   const form = rows >= 4 && layout.chance(0.3) ? 'ripples' : 'horizon';
-  // A short band leaves its rows to the land and keeps the text at the input.
-  const mode = rows <= 2 || layout.chance(form === 'horizon' ? 0.45 : 0.2) ? 'inline' : 'inside';
+  const mode = layout.chance(form === 'horizon' ? 0.45 : 0.2) ? 'inline' : 'inside';
   const textWidth = text.reduce((sum, r) => sum + r.width + 2, -2);
   let place, cols;
   if (form === 'horizon') {
-    const from = layout.chance(0.75) ? 0 : layout.int(80, 300), to = layout.chance(0.65) ? 1000 : layout.int(Math.max(from + 450, 700), 1000);
+    // Up to five rows the land stays near the text; taller horizons may span.
+    const from = layout.chance(0.75) ? 0 : layout.int(80, 300);
+    const to = height <= 5 ? Math.min(1000, from + layout.int(450, 650)) : layout.chance(0.65) ? 1000 : layout.int(Math.max(from + 450, 700), 1000);
     // Text inside the land must fit within it; otherwise the land spans the row.
     place = stretch(from, to);
     if (mode === 'inside' && place.columns < textWidth + 4) place = stretch(0, 1000);
