@@ -1,5 +1,6 @@
 import { createDesign, fromRecipe, recipe } from './design.js';
 import { randomSeed } from './random.js';
+import { curate } from './quality.js';
 
 const domains = ['artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed'];
 const noPins = () => ({ shape: false, layout: false, colors: false, fragments: [] });
@@ -55,7 +56,17 @@ function reroll(state, seed) {
 }
 
 export function explorerAction(state, action) {
-  if (action.type === 'reroll') return reroll(state, action.seed ?? randomSeed());
+  if (action.type === 'reroll') {
+    if (action.seed !== undefined) return reroll(state, action.seed);
+    // A random reroll keeps the strongest of several candidates of one engine.
+    const states = new Map();
+    const best = curate((seed) => {
+      const next = reroll(state, seed);
+      states.set(next.current, next);
+      return next.current;
+    }, Array.from({ length: 5 }, randomSeed));
+    return states.get(best);
+  }
   if (action.type === 'pin') {
     if (action.target === 'fragment') {
       if (!explorerFragments(state.current).some(({ id }) => id === action.id)) throw new Error('Choose an available assembly fragment to pin.');

@@ -8,6 +8,7 @@ import { preview } from '../src/preview.js';
 import { engines } from '../src/engines.js';
 import { palettes } from '../src/palettes.js';
 import { randomSeed } from '../src/random.js';
+import { curate } from '../src/quality.js';
 import { materials, alphabets } from '../src/ornaments.js';
 import { gallery } from '../src/gallery.js';
 import packageInfo from '../package.json' with { type: 'json' };
@@ -142,7 +143,11 @@ async function main() {
     delete options.colors;
     delete options.colorProgram;
   }
-  const design = createDesign(options);
+  // Without a seed, roll several and keep the strongest of the first roll's
+  // engine. Explicit seeds and saved recipes are always reproduced exactly.
+  const design = options.seed === undefined
+    ? curate((seed) => createDesign({ ...options, seed }), Array.from({ length: 6 }, randomSeed))
+    : createDesign(options);
   const width = integer(values.width, Math.min(1000, Math.max(10, process.stdout.columns || 100)), 10, 1000, 'Width');
   const color = !values['no-color'] && process.env.NO_COLOR === undefined;
   const renderOptions = { width, color };

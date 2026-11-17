@@ -1,26 +1,11 @@
-import { createDesign, recipe } from './design.js';
-import { flatten } from './flatten.js';
-
-const WIDTH = 79;
-const position = (a) => Math.floor(a.at * (WIDTH - 1) / 1000) + a.offset;
-const strokes = /[─━═╌╍┄┅┈┉╴╶│┃║╎╏┆┇┊┋┌┐└┘╭╮╰╯┬┴├┤┼]/;
+import { createDesign } from './design.js';
+import { occupancy } from './measure.js';
+import { quality } from './quality.js';
 
 // Describe the final occupied medium at several scales. Color names and glyph
 // fallback cannot manufacture variety; fields remain measurable reservations.
 export function signature(input) {
-  const design = input.glyphs === 'unicode' ? input : createDesign({ ...recipe(input), glyphs: 'unicode' });
-  const rows = design.scene.rows;
-  const grid = Array.from({ length: rows }, () => Array(WIDTH).fill(0));
-  const roleGrid = Array.from({ length: rows }, () => Array(WIDTH).fill(false));
-  for (const [y, spans] of flatten(design, WIDTH).entries()) for (const part of spans) {
-    const filled = typeof part.ink === 'object' && part.ink.bg != null;
-    const chars = [...part.text], origin = position(part.origin);
-    for (let x = Math.max(0, position(part.from)); x < Math.min(WIDTH, position(part.to)); x++) {
-      const char = chars[((x - origin) % chars.length + chars.length) % chars.length];
-      if (filled || part.role || char !== ' ') grid[y][x] = filled ? 3 : part.edges || strokes.test(char) ? 2 : 1;
-      roleGrid[y][x] = !!part.role;
-    }
-  }
+  const { design, rows, width: WIDTH, grid, roleGrid } = occupancy(input);
   const total = grid.flat().filter(Boolean).length;
   const count = (predicate) => grid.reduce((n, row, y) => n + row.filter((cell, x) => predicate(cell, x, y)).length, 0);
   const rowMass = grid.map((row) => row.filter(Boolean).length / WIDTH);
@@ -72,10 +57,17 @@ export function signature(input) {
 export function gallery(options, count) {
   const make = (i) => createDesign({ ...options, seed: `${options.seed}/${i + 1}` });
   const first = make(0);
-  const candidates = Array.from({ length: count * 8 }, (_, i) => {
+  const pool = Array.from({ length: count * 8 }, (_, i) => {
     const design = i ? make(i) : first;
-    return { design, vector: signature(design), distance: Infinity };
+    return { design, vector: signature(design), score: quality(design).score, distance: Infinity };
   });
+  // Drop each engine's weakest specimens before maximizing variety, so the
+  // most distant candidate is not simply the most broken one. Ranking within
+  // an engine keeps the engine mix intact.
+  const candidates = Object.values(Object.groupBy(pool, ({ design }) => design.engine)).flatMap((group) => {
+    const keep = Math.max(1, Math.ceil(group.length * 0.6));
+    return [...group].sort((a, b) => b.score - a.score).slice(0, keep);
+  }).sort((a, b) => pool.indexOf(a) - pool.indexOf(b));
   const distance = (a, b) => a.reduce((sum, n, i) => sum + (n - b[i]) ** 2, 0);
   // Start near the pool's geometric center, then maximize distance from designs
   // already shown. The first seed has no special privilege in the collection.
