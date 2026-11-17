@@ -75,14 +75,25 @@ export function gallery(options, count) {
   // already shown. The first seed has no special privilege in the collection.
   const center = candidates[0].vector.map((_, i) => candidates.reduce((sum, c) => sum + c.vector[i], 0) / candidates.length);
   candidates.sort((a, b) => distance(a.vector, center) - distance(b.vector, center));
+  // Distance alone favors the tallest specimens, so tall ones (more than three
+  // rows) get the pool's share of the collection. Families that only come tall
+  // still get their place.
+  const tall = ({ design }) => design.height > 3;
+  const onlyTall = new Set(candidates.map(({ design }) => design.engine)
+    .filter((engine) => candidates.every((item) => item.design.engine !== engine || tall(item))));
+  const tallQuota = Math.max(onlyTall.size, Math.round(count * candidates.filter(tall).length / candidates.length));
   const chosen = [candidates.shift()];
-  while (chosen.length < count) {
+  while (chosen.length < count && candidates.length) {
     const latest = chosen.at(-1).vector;
     for (const candidate of candidates) candidate.distance = Math.min(candidate.distance, distance(candidate.vector, latest));
     const engineCounts = Object.fromEntries(candidates.map(({ design }) => [design.engine, chosen.filter((item) => item.design.engine === design.engine).length]));
     const leastRepresented = Math.min(...Object.values(engineCounts));
+    const roomForTall = chosen.filter(tall).length < tallQuota;
     candidates.sort((a, b) => b.distance - a.distance);
-    chosen.push(candidates.splice(candidates.findIndex(({ design }) => engineCounts[design.engine] === leastRepresented), 1)[0]);
+    const due = ({ design }) => engineCounts[design.engine] === leastRepresented;
+    let index = candidates.findIndex((item) => due(item) && (roomForTall || !tall(item) || onlyTall.has(item.design.engine)));
+    if (index < 0) index = candidates.findIndex(due);
+    chosen.push(candidates.splice(index, 1)[0]);
   }
   return chosen.map(({ design }) => design);
 }
