@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDesign, recipe, fromRecipe, mutateDesign } from '../src/design.js';
+import { createDesign, recipe, fromRecipe, mutateDesign, LATEST } from '../src/design.js';
 import { createExplorerState, explorerAction, explorerFragments } from '../src/exploration.js';
 import { compile } from '../src/compile.js';
 
@@ -11,7 +11,7 @@ const slots = (design) => design.scene.runs.filter((run) => run.kind === 'slot')
 test('version-7 component seeds and full exported source round-trip across all families', () => {
   for (const engine of engines) {
     const design = createDesign({ engine, seed: `v7-roundtrip/${engine}`, complexity: 9 });
-    assert.equal(design.version, 7);
+    assert.equal(design.version, LATEST);
     const saved = JSON.parse(JSON.stringify(recipe(design)));
     assert.deepEqual(recipe(fromRecipe(saved)), saved);
     assert.equal(compile(design), compile(fromRecipe(saved)));

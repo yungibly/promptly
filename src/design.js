@@ -6,13 +6,17 @@ import { materials, alphabets } from './ornaments.js';
 import { compactIdentity, withIdentity } from './identity.js';
 import { withRoleBand } from './role-band.js';
 import { generateColors } from './chromatic.js';
+import { engines, pickEngine } from './engines.js';
+
+export const LATEST = 8;
 
 export function createDesign(options = {}) {
   const seed = String(options.seed ?? randomSeed());
   if (!seed.length || seed.length > 256) throw new Error('Seed must contain 1–256 characters.');
   const style = options.style ?? 'compose';
-  const modern = style === 'compose' && (options.version === undefined || options.version === 6 || options.version === 7);
-  const evolved = modern && (options.version === undefined || options.version === 7);
+  const modern = style === 'compose' && (options.version === undefined || [6, 7, LATEST].includes(options.version));
+  const evolved = modern && options.version !== 6;
+  const latest = modern && (options.version === undefined || options.version === LATEST);
   const palette = options.palette ?? (options.version === undefined || modern ? 'generated' : random(seed, 'palette').pick(Object.keys(palettes)));
   // One roll explores the whole detail range without moving the independent
   // engine, footprint, weight, or color streams. Recipes store the resolved roll.
@@ -40,24 +44,24 @@ export function createDesign(options = {}) {
   if (options.info !== undefined || options.version === undefined || options.version >= 5) config.info = info;
   if (style === 'compose') {
     let engine = options.engine ?? ({ 2: 'network', 3: 'assembly', 4: 'prompt', 5: 'surface' }[options.version] ?? 'auto');
-    if (!['auto', 'surface', 'prompt', 'assembly', 'network'].includes(engine)) throw new Error('Engine must be auto, surface, prompt, assembly, or network.');
+    const available = Object.keys(engines).filter((name) => engines[name].since <= (latest ? LATEST : modern ? options.version : 7));
+    if (engine !== 'auto' && !available.includes(engine)) throw new Error(`Engine must be auto, ${available.join(', ')}.`);
     const automatic = engine === 'auto';
     if (engine === 'auto') {
-      const ranges = { surface: [1, 3], prompt: [1, 3], assembly: [2, 12], network: [4, 12] };
-      const candidates = Object.keys(ranges).filter((name) => {
-        const [min, max] = ranges[name];
+      const candidates = available.filter((name) => {
+        const [min, max] = engines[name].rows;
         return (options.height === undefined || Number(options.height) >= min && Number(options.height) <= max)
-          && (name !== 'network' || !['spread', 'fragments', 'connectivity'].some((key) => options[key] !== undefined));
+          && (engines[name].controls || !['spread', 'fragments', 'connectivity'].some((key) => options[key] !== undefined));
       });
       if (!candidates.length) throw new Error('No engine supports these composition controls. Height must be an integer from 1 to 12.');
-      engine = random(seed, 'trait:engine').pick(candidates);
+      engine = pickEngine(random(seed, 'trait:engine'), candidates, latest ? LATEST : options.version ?? 7);
     }
     const material = options.material ?? random(seed, 'trait:material').pick(Object.keys(materials));
-    // Runes remain available explicitly; they no longer define the default look.
-    const alphabet = options.alphabet ?? random(seed, 'trait:alphabet').pick(['geometric', 'punctuation', 'technical', 'granular']);
+    // Runes, punctuation, and hex digits remain explicit choices. Version 8
+    // samples only alphabets that read as marks rather than as stray text.
+    const alphabet = options.alphabet ?? random(seed, 'trait:alphabet').pick(latest ? ['geometric', 'granular'] : ['geometric', 'punctuation', 'technical', 'granular']);
     const symmetry = options.symmetry ?? (random(seed, 'trait:symmetry').chance(engine === 'network' ? 0.3 : 0.15) ? 'mirror' : 'none');
-    const automaticHeights = { surface: [1, 2, 2, 3], prompt: [1, 2, 2, 3], assembly: [2, 3, 4, 6, 8, 12], network: [4, 4, 5, 6, 8, 12] };
-    const height = Number(options.height ?? (automatic || modern ? random(seed, 'trait:auto-height').pick(automaticHeights[engine]) : ['surface', 'prompt'].includes(engine) ? random(seed, 'trait:height').pick([1, 2, 2, 3]) : engine === 'network'
+    const height = Number(options.height ?? (automatic || modern ? random(seed, 'trait:auto-height').pick(engines[engine].heights) : ['surface', 'prompt'].includes(engine) ? random(seed, 'trait:height').pick([1, 2, 2, 3]) : engine === 'network'
       ? random(seed, 'trait:height').int(Math.min(4 + Math.floor(complexity / 3), 8), Math.min(5 + complexity, 12))
       : random(seed, 'trait:height').int(2, Math.min(4 + complexity, 12))));
     const density = Number(options.density ?? (0.3 + random(seed, 'trait:density').next() * 0.35).toFixed(3));
@@ -65,7 +69,7 @@ export function createDesign(options = {}) {
     if (!Object.hasOwn(materials, material)) throw new Error(`Unknown material: ${material}. Choose ${Object.keys(materials).join(', ')}.`);
     if (!Object.hasOwn(alphabets, alphabet)) throw new Error(`Unknown alphabet: ${alphabet}. Choose ${Object.keys(alphabets).join(', ')}.`);
     if (!['none', 'mirror'].includes(symmetry)) throw new Error('Symmetry must be none or mirror.');
-    const minHeight = ['surface', 'prompt'].includes(engine) ? 1 : engine === 'network' ? 4 : 2, maxHeight = ['surface', 'prompt'].includes(engine) ? 3 : 12;
+    const [minHeight, maxHeight] = engines[engine].rows;
     if (!Number.isInteger(height) || height < minHeight || height > maxHeight) throw new Error(`Height must be an integer from ${minHeight} to ${maxHeight} for ${engine}.`);
     if (!Number.isFinite(density) || density < 0.15 || density > 0.85) throw new Error('Density must be between 0.15 and 0.85.');
     if (!ornamentSeed.length || ornamentSeed.length > 256) throw new Error('Ornament seed must contain 1–256 characters.');
@@ -75,7 +79,7 @@ export function createDesign(options = {}) {
       if (!Number.isFinite(weight) || weight < 0 || weight > 1) throw new Error('Weight must be between 0 and 1.');
       config.weight = weight;
     } else if (options.weight !== undefined) throw new Error('Weight requires a version 6 composition.');
-    if (engine !== 'network') {
+    if (engines[engine].controls) {
       const spread = Number(options.spread ?? (0.2 + random(seed, 'trait:spread').next() * 0.8).toFixed(3));
       const fragments = Number(options.fragments ?? random(seed, 'trait:fragments').pick(['surface', 'prompt'].includes(engine) ? [1, 2, 3, 4] : [1, 1, 2, 3, 4, 5, 7, 9, 12]));
       const connectionRng = random(seed, 'trait:connectivity');
@@ -85,7 +89,7 @@ export function createDesign(options = {}) {
       if (!Number.isFinite(connectivity) || connectivity < 0 || connectivity > 1) throw new Error('Connectivity must be between 0 and 1.');
       Object.assign(config, { spread, fragments, connectivity });
     } else if (['spread', 'fragments', 'connectivity'].some((key) => options[key] !== undefined)) {
-      throw new Error('Spread, fragments, and connectivity require engine surface, prompt or assembly.');
+      throw new Error(`Spread, fragments, and connectivity require engine ${Object.keys(engines).filter((name) => engines[name].controls).join(', ')}.`);
     }
   } else if (['engine', 'material', 'alphabet', 'symmetry', 'height', 'density', 'ornamentSeed', 'spread', 'fragments', 'connectivity', 'weight'].some((key) => options[key] !== undefined)) {
     throw new Error('Composition controls and scoped mutations require style compose.');
@@ -103,11 +107,13 @@ export function createDesign(options = {}) {
   } else if (['artSeed', 'layoutSeed', 'roleSeed', 'motifSeed', 'interactionSeed', 'fragmentSeeds'].some((key) => options[key] !== undefined)) throw new Error('Component seeds require a version 7 composition.');
   const context = { ...config, colors, modern, evolved, info, label: config.engine === 'surface' || modern && config.engine === 'prompt' ? label : label || 'username', rng: random(config.artSeed ?? seed, `structure:${style}`), ornament: random(config.ornamentSeed ?? seed, `ornament:${style}`) };
   let composition = grammars[style].build(context);
-  if (modern && info && ['assembly', 'network'].includes(config.engine)) composition = withRoleBand(composition, { ...config, colors, evolved });
-  else if (info && config.engine !== 'surface' && !(modern && config.engine === 'prompt')) composition = withIdentity(composition, config);
+  if (modern && info && engines[config.engine].band) composition = withRoleBand(composition, { ...config, colors, evolved });
+  // Modern engines place their own live fields; only older generators get the
+  // separate identity band.
+  else if (info && !modern && config.engine !== 'surface') composition = withIdentity(composition, config);
   if (glyphs === 'ascii') composition.rightPrompt = ascii(composition.rightPrompt);
   return {
-    version: evolved ? 7 : modern ? 6 : style === 'compose' ? ({ network: 2, assembly: 3, prompt: 4, surface: 5 }[config.engine]) : 1,
+    version: latest ? LATEST : evolved ? 7 : modern ? 6 : style === 'compose' ? ({ network: 2, assembly: 3, prompt: 4, surface: 5 }[config.engine]) : 1,
     ...config,
     colors,
     ...composition,
@@ -133,9 +139,9 @@ export function recipe(design) {
 }
 
 export function fromRecipe(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || ![1, 2, 3, 4, 5, 6, 7].includes(value.version)) throw new Error('Expected a Promptly recipe with version 1, 2, 3, 4, 5, 6, or 7.');
-  if ((value.style === 'compose') !== (value.version >= 2)) throw new Error('Composed recipes require version 2–7; classic recipes require version 1.');
-  if (value.version >= 6 && !['surface', 'prompt', 'assembly', 'network'].includes(value.engine)) throw new Error(`Version ${value.version} recipes require a resolved composition engine.`);
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !Number.isInteger(value.version) || value.version < 1 || value.version > LATEST) throw new Error(`Expected a Promptly recipe with version 1–${LATEST}.`);
+  if ((value.style === 'compose') !== (value.version >= 2)) throw new Error(`Composed recipes require version 2–${LATEST}; classic recipes require version 1.`);
+  if (value.version >= 6 && !(Object.hasOwn(engines, value.engine) && engines[value.engine].since <= value.version)) throw new Error(`Version ${value.version} recipes require a resolved composition engine.`);
   if (value.version === 5 && value.engine !== 'surface') throw new Error('Version 5 recipes require engine surface.');
   if (value.version === 4 && value.engine !== 'prompt') throw new Error('Version 4 recipes require engine prompt.');
   if (value.version === 3 && value.engine !== 'assembly') throw new Error('Version 3 recipes require engine assembly.');

@@ -90,3 +90,14 @@ test('small exports contain only text, parameter arithmetic, and undo support', 
   assert.ok(Buffer.byteLength(source) < Buffer.byteLength(legacy(design)) / 3);
   assert.doesNotMatch(source, /\$\((?!\()|_promptly_(?:paint|wire|expand)\(|add-zsh-hook|add-zle-hook|for\s*\(\(/);
 });
+
+test('literal inks compile to native colors and reject anything but six-digit hex', () => {
+  const design = createCurrentDesign({ seed: 'literal-ink', engine: 'surface' });
+  design.scene.text(0, { at: 0, offset: 0 }, '▀', { fg: '#FFAA00', bg: '#102030' });
+  const source = compile(design);
+  assert.ok(source.includes('%K{#102030}') && source.includes('%F{#FFAA00}'));
+  for (const ink of ['#12345', 'red', '#123456}%F{#000000', '#gggggg']) {
+    design.scene.runs.at(-1).ink = ink;
+    assert.throws(() => compile(design), /Invalid ink/);
+  }
+});

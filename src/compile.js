@@ -7,7 +7,17 @@ export const quoteZsh = (text) => `'${String(text).replaceAll("'", "'\\''")}'`;
 const promptText = (text) => text.replaceAll('%', '%%');
 const expansionText = (text) => promptText(text).replace(/[\\$`]/g, '\\$&');
 
+// An ink is a palette slot or a literal color derived from the palette (for
+// gradients). Nothing else may reach a %F{...} or %K{...} escape.
+const HEX = /^#[0-9a-f]{6}$/i;
+function resolveInk(design, ink) {
+  const color = typeof ink === 'string' ? ink : design.colors[ink];
+  if (typeof color !== 'string' || !HEX.test(color)) throw new Error(`Invalid ink: ${JSON.stringify(ink)}`);
+  return color;
+}
+
 export function compile(design) {
+  const inkColor = (ink) => resolveInk(design, ink);
   const runtime = typeof __PROMPTLY_RUNTIME__ === 'string' ? __PROMPTLY_RUNTIME__ : readFileSync(new URL('./runtime.zsh', import.meta.url), 'utf8');
   const constants = new Map(), frames = [], variants = [], cache = new Map();
   const constant = (text) => {
@@ -54,8 +64,8 @@ export function compile(design) {
       return row.map((span) => {
         let color = '';
         const style = typeof span.ink === 'object' ? span.ink : { fg: span.ink, bg: null };
-        const bg = style.bg == null ? null : design.colors[style.bg];
-        const preferred = style.fg === 'contrast' ? undefined : design.colors[style.fg ?? 2];
+        const bg = style.bg == null ? null : inkColor(style.bg);
+        const preferred = style.fg === 'contrast' ? undefined : inkColor(style.fg ?? 2);
         const fg = bg ? contrastInk(bg, preferred) : preferred ?? contrastInk('#000000');
         if (bg !== background) {
           color += bg ? `%K{${bg}}` : '%k';
