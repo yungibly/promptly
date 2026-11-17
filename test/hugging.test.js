@@ -138,6 +138,6 @@ test('flatten keeps a hugging run as its full reservation and rejects overpainti
   assert.throws(() => invalid.live(0, left(0), 6, [{ role: 'directory', width: 6 }, { text: ']' }]), /exceed/);
   assert.throws(() => invalid.live(0, left(0), 6, [{ text: '[' }]), /needs a username or directory/);
   assert.throws(() => invalid.slot(0, left(0), 'host', 6, 2, {}), /Unknown live role/);
-  assert.throws(() => invalid.slot(0, left(0), 'directory', 8, 2, { suffix: '\x1b[2J' }), /printable/);
-  assert.throws(() => invalid.slot(0, left(0), 'directory', 8, 2, { pad: '😀' }), /printable/);
+  assert.throws(() => invalid.slot(0, left(0), 'directory', 8, 2, { suffix: '\x1b[2J' }), /single-cell/);
+  for (const glyph of ['😀', '界', 'Ａ', '\u0301']) assert.throws(() => invalid.slot(0, left(0), 'directory', 8, 2, { pad: glyph }), /single-cell/);
 });

@@ -34,8 +34,11 @@ function checkRole(role, width) {
   if (!Number.isInteger(width) || width < 2 || width > 64) throw new Error('Live role width must be 2–64 cells.');
   return true;
 }
+// Reservations count one cell per glyph, so reject controls, marks, emoji,
+// and East Asian wide or fullwidth characters in decoration.
+const multiCell = /[\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{M}\p{Emoji_Presentation}\u1100-\u115f\u2e80-\u303e\u3041-\u33ff\u3400-\u4dbf\u4e00-\u9fff\ua000-\ua4cf\ua960-\ua97f\uac00-\ud7a3\uf900-\ufaff\ufe10-\ufe19\ufe30-\ufe6f\uff00-\uff60\uffe0-\uffe6\u{1f300}-\u{1f64f}\u{1f900}-\u{1f9ff}\u{20000}-\u{3fffd}]/u;
 function checkGlyphs(text, limit) {
-  if (typeof text !== 'string' || !text.length || [...text].length > limit || /[\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{M}\p{Emoji_Presentation}]/u.test(text)) throw new Error(`Live run glyphs must be 1–${limit} printable cells.`);
+  if (typeof text !== 'string' || !text.length || [...text].length > limit || multiCell.test(text)) throw new Error(`Live run glyphs must be 1–${limit} single-cell characters.`);
   return text;
 }
 
