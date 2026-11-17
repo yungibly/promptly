@@ -63,6 +63,11 @@ test('every version-8 compact prompt keeps rows, reservations, and command entry
 test('repairs stay within the height budget and band leaders move with their band', () => {
   const tall = createDesign({ seed: 'height/115', engine: 'surface', height: 3, label: 'a twenty-cell label.', complexity: 10 });
   assert.ok(tall.scene.rows <= 3 && tall.cursor <= 47);
+  // A last line inherits the x of a stepped line above it.
+  for (let i = 0; i < 600; i++) {
+    const design = createDesign({ seed: `extreme/${i}`, engine: i % 2 ? 'surface' : 'prompt', height: 3, label: '12345678901234567890' });
+    assert.ok(design.cursor <= 47 && design.scene.rows <= 3, `${design.seed}: cursor ${design.cursor}`);
+  }
   // A fill whose end stayed behind when its band moved would end before it starts.
   const column = (a, width) => Math.trunc(a.at * (width - 1) / 1000) + a.offset;
   for (let i = 0; i < 40; i++) {

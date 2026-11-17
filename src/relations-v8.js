@@ -105,7 +105,8 @@ export function planCompact(config) {
     if (directory && directory.width > 12) { directory.width--; recount(plan); }
     else if (cluster) cluster.allowance--;
     else if (problem.kind === 'hook') plan.attach = 'align';
-    else if (plan.lines[problem.line].relation === 'step') plan.lines[problem.line].relation = 'align';
+    // A line inherits its x from the lines above, so simplify any of them.
+    else if (plan.lines.slice(1, problem.line + 1).some((line) => line.relation !== 'align')) plan.lines.slice(1, problem.line + 1).findLast((line) => line.relation !== 'align').relation = 'align';
     else if (right.some(Boolean)) right.fill(false);
     else if (plan.follow && plan.lines.length < plan.height) { plan.follow = false; plan.attach = 'bare'; }
     else if (shape.indent && plan.attach !== 'rail') shape.indent = 0;
