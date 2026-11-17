@@ -6,6 +6,8 @@ import { evolve } from './automaton.js';
 // always palette colored. A texture is a raster grid (rows x width of
 // { ch, fg, bg } or null); emit it with raster.emit(). `anchor` is the column
 // the texture grows from (the label, the marker), when the caller has one.
+// `detail` (0..1) adds detail without changing the footprint: finer ramps,
+// more octaves, busier rules, more turns, denser growth.
 
 const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
 const threshold = (x, y) => (BAYER[y & 3][x & 3] + 0.5) / 16;
@@ -22,11 +24,11 @@ const dots = (h, w) => grid(w, h);
 const kinds = {
   // A truecolor bed. Each cell is two pixels: even one row carries a lit top
   // edge over the horizontal gradient. Text can sit on it.
-  gradient(rng, { width, rows, colors, anchor }) {
+  gradient(rng, { width, rows, colors, anchor, detail }) {
     const deep = [mix(colors.ground, colors.stops[0], 0.55), mix(colors.ground, colors.stops[1], 0.7), mix(colors.stops.at(-1), colors.ground, 0.25)];
     // Unanchored beds run either way; anchored ones are brightest at the anchor.
     const flip = rng.chance(0.5) && anchor === undefined;
-    const inks = ramp(flip ? [...deep].reverse() : deep, steps(width));
+    const inks = ramp(flip ? [...deep].reverse() : deep, clamp(Math.round(steps(width) * (0.5 + detail)), 2, 16));
     const lift = 0.03 + rng.next() * 0.06;
     const at = anchor === undefined ? null : clamp(anchor, 0, width - 1);
     return grid(width, rows).map((line, y) => line.map((_, x) => {
@@ -37,8 +39,8 @@ const kinds = {
     }));
   },
   // A silhouette in lower eighths: eight steps of height per row.
-  ridge(rng, { width, rows, colors }) {
-    const noise = fbm(rng, 2), scale = 2 + rng.next() * 6, phase = rng.next() * 40;
+  ridge(rng, { width, rows, colors, detail }) {
+    const noise = fbm(rng, 1 + Math.round(detail * 3)), scale = (2 + rng.next() * 6) * (1.3 - detail * 0.6), phase = rng.next() * 40;
     const inks = ramp(colors.stops, steps(width));
     return grid(width, rows).map((line, y) => line.map((_, x) => {
       const n = clamp(0.5 + (noise(x / scale + phase) - 0.5) * 2.2), top = rows * (0.85 - 0.85 * n);
@@ -50,7 +52,7 @@ const kinds = {
   // An elementary automaton, time running down. One row shows two half-block
   // generations sliced from a run that has already developed (from the
   // anchor's span, when there is one); two rows show four, or eight in braille.
-  automaton(rng, { width, rows, colors, anchor }) {
+  automaton(rng, { width, rows, colors, anchor, detail }) {
     const fine = rows > 1 && rng.chance(0.35), sx = fine ? 2 : 1, sy = fine ? 4 : 2;
     const w = width * sx, shown = rows * sy, warm = rows === 1 ? rng.int(6, 18) : 0;
     // An anchor seeds a span around it, so the strip reads as coming from the
@@ -60,7 +62,8 @@ const kinds = {
     if (!init.includes(1)) init[at ?? rng.int(0, w - 1)] = 1;
     let rule, history;
     for (let attempt = 0; attempt < 6; attempt++) {
-      rule = rng.pick(anchor === undefined ? [30, 54, 60, 62, 86, 90, 106, 110, 122, 126, 150] : [18, 22, 26, 30, 60, 90, 102, 122, 126, 146, 150, 182]);
+      // Low detail favors regular, nested rules; high detail chaotic ones.
+      rule = rng.pick(detail < 0.5 ? [18, 22, 60, 90, 102, 122, 126, 146, 150] : [30, 54, 62, 86, 106, 110, 124, 182]);
       history = evolve(rule, init, warm + shown).slice(warm);
       const live = history.flat().filter(Boolean).length / (w * shown);
       if (live > 0.08 && live < 0.6) break;
@@ -73,14 +76,14 @@ const kinds = {
     return fine ? braille(sub) : halfBlocks(sub);
   },
   // Quarter-arc chains: caps and cups in one row, a meander between two.
-  truchet(rng, { width, rows, colors }) {
+  truchet(rng, { width, rows, colors, detail }) {
     const inks = ramp(bright(colors), steps(width)), cells = grid(width, rows);
     const put = (x, y, ch) => { if (x < width && cells[y]) cells[y][x] = { ch, fg: along(inks, x, width) }; };
     if (rows === 1) {
       // Caps and cups mostly alternate, so the chain reads as one squiggle.
       let cap = rng.chance(0.5);
       for (let x = 0; x < width;) {
-        const run = rng.int(0, 2);
+        const run = rng.int(0, detail > 0.6 ? 1 : 2);
         put(x, 0, cap ? '╭' : '╰');
         for (let i = 1; i <= run; i++) put(x + i, 0, '─');
         put(x + run + 1, 0, cap ? '╮' : '╯');
@@ -92,7 +95,7 @@ const kinds = {
     // One strand weaving between the top and bottom rows of the band.
     let y = rng.int(0, rows - 1);
     for (let x = 0; x < width;) {
-      const run = rng.int(1, 4);
+      const run = rng.int(1, Math.max(1, Math.round(4 - detail * 3)));
       for (let i = 0; i < run && x < width; i++, x++) put(x, y, '─');
       if (x >= width) break;
       const next = y === 0 ? 1 : y === rows - 1 ? y - 1 : y + (rng.chance(0.5) ? 1 : -1);
@@ -102,8 +105,8 @@ const kinds = {
     return cells;
   },
   // Diagonal 10-PRINT, dropping out where density thins.
-  maze(rng, { width, rows, colors }) {
-    const inks = ramp(bright(colors), steps(width)), bias = 0.35 + rng.next() * 0.3, density = 0.7 + rng.next() * 0.3;
+  maze(rng, { width, rows, colors, detail }) {
+    const inks = ramp(bright(colors), steps(width)), bias = 0.35 + rng.next() * 0.3, density = 0.5 + detail * 0.3 + rng.next() * 0.2;
     const tile = (x) => ({ ch: rng.next() < bias ? '╱' : '╲', fg: along(inks, x, width) });
     const cells = grid(width, rows).map((line) => line.map((_, x) => rng.next() < density ? tile(x) : null));
     // A narrow run never drops every tile.
@@ -111,9 +114,9 @@ const kinds = {
     return cells;
   },
   // Braille waves: four dot rows per cell row, one or two strands.
-  wave(rng, { width, rows, colors, anchor }) {
+  wave(rng, { width, rows, colors, anchor, detail }) {
     const h = rows * 4, w = width * 2, sub = dots(h, w), inks = ramp(brightest(colors), steps(width));
-    const strands = rng.chance(0.35) ? 2 : 1, cycles = 1 + rng.next() * width / 8;
+    const strands = rng.chance(0.15 + detail * 0.5) ? 2 : 1, cycles = 1 + rng.next() * width / 8 * (0.5 + detail);
     for (let s = 0; s < strands; s++) {
       const phase = rng.next() * 6.28, amp = (h - 1) / 2 * (s ? 0.6 : 1), beat = rng.next();
       let last = null;
@@ -130,10 +133,10 @@ const kinds = {
   },
   // Sprigs: stems rising from the base, leaves on alternating sides, and a
   // bloom. Two-dot stems keep them legible in a single row of braille.
-  sprig(rng, { width, rows, colors, anchor }) {
+  sprig(rng, { width, rows, colors, anchor, detail }) {
     const h = rows * 4, w = width * 2, sub = dots(h, w);
     const stem = mix(colors.stops[1], colors.stops.at(-1), 0.4), leaf = brightest(colors)[1], bloom = colors.accents[rng.int(0, 2)];
-    const count = clamp(Math.round(width / rng.int(3, 6)), 1, 10);
+    const count = clamp(Math.round(width / (rng.int(3, 6) * (1.4 - detail * 0.7))), 1, 12);
     for (let i = 0; i < count; i++) {
       // Sprigs spread across the strip; with an anchor they are tallest there.
       const base = Math.round((i + 0.2 + rng.next() * 0.6) * w / count);
@@ -144,15 +147,15 @@ const kinds = {
         x = clamp(x + lean, 0, w - 2); lean += (rng.next() - 0.5) * 0.25;
         const cx = Math.round(x);
         sub[y][cx] = stem; if (y > h - tall / 2) sub[y][cx + 1] = stem;
-        if (y < h - 1 && y > h - tall && rng.chance(0.45)) { const lx = cx + (side > 0 ? 2 : -1); if (lx >= 0 && lx < w) sub[y - 1][lx] = leaf; side = -side; }
+        if (y < h - 1 && y > h - tall && rng.chance(0.2 + detail * 0.45)) { const lx = cx + (side > 0 ? 2 : -1); if (lx >= 0 && lx < w) sub[y - 1][lx] = leaf; side = -side; }
       }
       if (rng.chance(0.55)) for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { const bx = Math.round(x) + dx, by = h - tall + dy - 1; if (by >= 0 && bx < w) sub[by][bx] = bloom; }
     }
     return braille(sub, (color) => color === bloom ? 2 : color === leaf ? 1 : 0);
   },
   // A dithered dissolve: solid at one end, scattering into pixels at the other.
-  dissolve(rng, { width, rows, colors }) {
-    const inks = ramp(colors.stops, steps(width)), flip = rng.chance(0.5), sub = dots(rows * 2, width);
+  dissolve(rng, { width, rows, colors, detail }) {
+    const inks = ramp(colors.stops, clamp(Math.round(steps(width) * (0.5 + detail)), 2, 16)), flip = rng.chance(0.5), sub = dots(rows * 2, width);
     for (let y = 0; y < rows * 2; y++) for (let x = 0; x < width; x++) {
       const t = (flip ? width - 1 - x : x) / Math.max(1, width - 1);
       if (threshold(x, y) < 1 - t * 0.95) sub[y][x] = along(inks, x, width);
@@ -193,10 +196,11 @@ function fadeMask(cells, fade) {
   return cells.map((line, y) => line.map((cell, x) => cell && threshold(x, y) < visible(x) ? cell : null));
 }
 
-export function texture(kind, rng, { width, rows = 1, colors, ascii = false, fade = 'none', anchor } = {}) {
+export function texture(kind, rng, { width, rows = 1, colors, ascii = false, fade = 'none', anchor, detail = 0.5 } = {}) {
   if (!Object.hasOwn(kinds, kind)) throw new Error(`Unknown texture: ${kind}. Choose ${textureKinds.join(', ')}.`);
   if (!Number.isInteger(width) || width < 1 || !Number.isInteger(rows) || rows < 1) throw new Error('Texture width and rows must be positive integers.');
-  const cells = fadeMask(kinds[kind](rng, { width, rows, colors, anchor }), fade);
+  if (!Number.isFinite(detail) || detail < 0 || detail > 1) throw new Error('Texture detail must be between 0 and 1.');
+  const cells = fadeMask(kinds[kind](rng, { width, rows, colors, anchor, detail }), fade);
   return ascii ? cells.map((line) => line.map((cell) => cell && asciiCell(cell, kind))) : cells;
 }
 
