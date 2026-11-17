@@ -60,6 +60,14 @@ export function compile(design) {
     }
     return expression;
   }
+  // Unconditional color for one textured cell, as used inside a condition.
+  const escapes = (value, visible) => {
+    const style = typeof value === 'object' ? value : { fg: value, bg: null };
+    const bg = style.bg == null ? null : inkColor(style.bg);
+    const preferred = style.fg === 'contrast' ? undefined : inkColor(style.fg ?? 2);
+    const fg = bg && !(style.exact && preferred) ? contrastInk(bg, preferred) : preferred ?? contrastInk('#000000');
+    return (bg ? `%K{${bg}}` : '%k') + (visible || bg ? `%F{${fg}}` : '');
+  };
   // Hugging decoration follows the value, then the pad completes the fixed
   // reservation. Every part prints at least one cell, so earlier columns
   // never need a condition. Pad glyphs are escaped for the conditional; a
@@ -74,15 +82,19 @@ export function compile(design) {
       minimum += part.role ? 1 : [...part.text].length;
     }
     // Nothing follows a blank pad at the end of an art row: omit it.
-    const blank = !/[^ ]/.test(span.pad.text) && (typeof span.pad.ink !== 'object' || span.pad.ink.bg == null);
+    const textured = Array.isArray(span.pad.ink);
+    const blank = !textured && !/[^ ]/.test(span.pad.text) && (typeof span.pad.ink !== 'object' || span.pad.ink.bg == null);
     if (trailing && blank) return text;
     const glyphs = [...span.pad.text].map((glyph) => expansionText(glyph).replace(')', '%)'));
-    text += paint(span.pad.ink, !blank);
+    // A textured pad colors each revealed cell inside its own condition: any
+    // of them may be the first to print, so none can rely on its neighbor.
+    if (!textured) text += paint(span.pad.ink, !blank);
     for (let cells = minimum + 1; cells <= width; cells++) {
-      const glyph = glyphs[(cells - 1) % glyphs.length];
+      const i = (cells - 1) % glyphs.length, glyph = glyphs[i];
       const separator = glyph === '.' ? ',' : '.';
-      text += `%${column(span, cells)}(l${separator}${separator}${glyph})`;
+      text += `%${column(span, cells)}(l${separator}${separator}${textured ? escapes(span.pad.ink[i], glyph !== ' ') : ''}${glyph})`;
     }
+    if (textured) paint.forget();
     return text;
   }
   function frame(composition, width) {
@@ -109,6 +121,8 @@ export function compile(design) {
         }
         return color;
       };
+      // After conditional colors the current state is unknown: restate it.
+      paint.forget = () => { ink = -1; background = undefined; };
       return row.map((span, i) => span.parts ? huggingExpression(span, paint, y < rows.length - 1 && i === row.length - 1)
         : paint(span.ink, span.role || /[^ ]/.test(span.text)) + spanExpression(span)).join('') + '%f%b%k';
     }).join('\n');
@@ -156,6 +170,9 @@ export function compile(design) {
     .replace('@@ROWS@@', () => shared.length ? `typeset -ga _promptly_rows=(\n  ${shared.map(quoteZsh).join('\n  ')}\n)\n` : '')
     .replace('@@FRAMES@@', () => chosen.map(quoteZsh).join('\n  '))
     .replace('@@PROMPT@@', () => quoteZsh(prompt))
-    .replace('@@RIGHT@@', () => quoteZsh(design.rightPrompt ? `%F{${design.colors[1]}}${promptText(design.rightPrompt)}%f` : ''))
+    .replace('@@RIGHT@@', () => quoteZsh(design.rightRuns?.length
+      // A multi-ink accent: each run carries its own palette or literal color.
+      ? design.rightRuns.map((run) => `%F{${inkColor(run.ink)}}${promptText(run.text)}`).join('') + '%f'
+      : design.rightPrompt ? `%F{${design.colors[1]}}${promptText(design.rightPrompt)}%f` : ''))
     .replace('@@PS2@@', () => quoteZsh(`%F{${design.colors[1]}}... %f`));
 }
