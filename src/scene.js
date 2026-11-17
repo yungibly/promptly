@@ -79,7 +79,10 @@ export class Scene {
     const first = checked.find((part) => part.role);
     if (!first) throw new Error('A live run needs a username or directory part.');
     if (checked.reduce((n, part) => n + (part.width ?? [...part.text].length), 0) > width) throw new Error('Live run parts exceed their reservation.');
-    const fill = { text: checkGlyphs(glyphText(pad.text ?? ' ', this.glyphs), 8), ink: pad.ink ?? 0 };
+    // A pad is a short repeating pattern, or a texture strip as long as the
+    // reservation with one ink per glyph, revealed wherever the text ends.
+    const fill = { text: checkGlyphs(glyphText(pad.text ?? ' ', this.glyphs), 96), ink: pad.ink ?? 0 };
+    if (Array.isArray(fill.ink) && fill.ink.length !== [...fill.text].length) throw new Error('A textured pad needs one ink per glyph.');
     this.runs.push({ kind: 'slot', row, x, role: first.role, width, text: ' '.repeat(width), ink: first.ink, align: 'left', minWidth: 0, parts: checked, pad: fill });
     return this;
   }

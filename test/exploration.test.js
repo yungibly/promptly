@@ -7,7 +7,10 @@ import { engines as table } from '../src/engines.js';
 
 const engines = ['surface', 'prompt', 'assembly', 'network'];
 const pin = (state, target, id) => explorerAction(state, { type: 'pin', target, id });
-const slots = (design) => design.scene.runs.filter((run) => run.kind === 'slot').map(({ ink, ...run }) => run);
+// Reservations and their glyphs, without inks: colors are not pinned here, and
+// version-8 pads and surfaces take literal colors from the palette.
+const slots = (design) => design.scene.runs.filter((run) => run.kind === 'slot')
+  .map(({ ink, parts, pad, ...run }) => ({ ...run, ...(parts ? { parts: parts.map(({ ink: _, ...part }) => part), pad: pad.text } : {}) }));
 
 test('version-7 component seeds and full exported source round-trip across all families', () => {
   for (const engine of engines) {

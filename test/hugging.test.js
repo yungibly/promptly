@@ -108,6 +108,27 @@ test('compound live runs flow several values and literal glyphs inside one fixed
   }
 });
 
+test('a textured pad reveals its own glyph and color in each cell after the value', () => {
+  // A 16-cell strip of distinct glyphs; every cell its own foreground or surface.
+  const strip = '⠁⠂⠄⡀⢀⠠⠐⠈▁▂▃▄▅▆▇█';
+  const inks = [...strip].map((_, i) => i % 3 === 2 ? { fg: '#102030', bg: '#405060', exact: true } : i % 2 ? '#a0b0c0' : '#d0e0f0');
+  for (const leaf of ['s', 'a-longer-directory']) {
+    const cwd = join(root, 't', leaf);
+    mkdirSync(cwd, { recursive: true });
+    const scene = new Scene(2).live(0, left(1), 16, [{ role: 'directory', width: 12, ink: 3 }, { text: ' ', ink: 0 }], { text: strip, ink: inks })
+      .text(0, left(17), '┤', 1).text(1, left(0), '›', 4);
+    const output = render(scene, { cwd, home: join(root, 't') });
+    const value = expected(`~/${leaf}`, 12), end = 1 + value.length + 1;
+    const [row] = cells(output);
+    assert.equal(row.slice(end, 17).map((cell) => cell.char).join(''), [...strip].slice(end - 1).join(''), leaf);
+    assert.equal(row[17].char, '┤', `${leaf}: the column after the reservation moved`);
+    // Surfaces appear exactly on the cells whose strip ink has one.
+    for (let x = end; x < 17; x++) assert.equal(row[x].bg !== null, (x - 1) % 3 === 2, `${leaf}: cell ${x} surface`);
+    assert.equal(row[end - 1].bg, null, `${leaf}: the value's gap stays plain`);
+  }
+  assert.throws(() => new Scene(1).live(0, left(0), 8, [{ role: 'directory', width: 6 }], { text: 'ab', ink: ['#000000'] }), /one ink per glyph/);
+});
+
 test('ASCII mode keeps hugging geometry, and pad or literal metacharacters stay literal text', () => {
   const build = (glyphs, pad) => new Scene(1, glyphs).text(0, left(0), '◖', 6)
     .live(0, left(1), 20, [{ role: 'directory', width: 10, ink: { fg: 2, bg: 6 } }, { text: '◗', ink: 6 }, { text: '%n$(id)`\\', ink: 1 }], { text: pad, ink: 1 })

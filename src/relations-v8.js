@@ -2,14 +2,16 @@ import { Scene, anchor, left } from './scene.js';
 import { random } from './random.js';
 import { materials, alphabets } from './ornaments.js';
 import { rolePorts, roleMasks } from './interactions.js';
-import { deriveMotif, evolveMotif } from './motifs.js';
+import { palette, ramp, mix, emit, fixed } from './systems/raster.js';
+import { texture, rhythm, rhythmKinds } from './systems/texture.js';
 
 // Version 8 compact composition. Live values hug their decoration, so the
 // composer arranges text clusters rather than fixed-width fields: values flow
 // together or stand apart, lines stack or hang from each other, and command
-// entry follows the text or starts below it. Each cluster reserves room for
-// any treatment it may receive; unused cells become pad at its end, so weight
-// and ornament never move a field, a later cluster, or the input anchor.
+// entry follows the text or starts below it. Each cluster's reservation is a
+// small canvas: the text sits at its start and the rest reveals a texture,
+// a gradient bed, or a rhythm. Positions are planned before any paint, so
+// weight, ornament, complexity, and color never move a field or the input.
 const CURSOR = 45;
 const place = (x, at = 0) => anchor(at, x - Math.floor(at * 78 / 1000));
 const joinWidth = { tight: 1, spaced: 3, word: 4 };
@@ -26,7 +28,6 @@ function shuffle(rng, list) {
 export function planCompact(config) {
   const rng = random(config.roleSeed ?? config.seed, 'structure:relations-v8');
   const height = config.band ? 1 : config.height ?? 2;
-  const complexity = config.complexity ?? 3;
   const items = config.info === false ? [] : [{ role: 'username', width: rng.pick([6, 8, 8, 10]) }, { role: 'directory', width: rng.int(16, 28) }];
   if (config.label || !items.length) items.push({ role: 'label', text: config.label || 'prompt', width: (config.label || 'prompt').length });
   shuffle(rng, items).forEach((item, id) => { item.id = id; });
@@ -38,8 +39,7 @@ export function planCompact(config) {
   const joins = [];
   for (const item of items.slice(1)) {
     const options = ['flow', 'flow', 'flow', 'gap'];
-    // A text line above command entry is the point of a taller follow budget.
-    if (lines.length < textRows) options.push(...Array(follow ? 7 : 4).fill('line'));
+    if (lines.length < textRows) options.push('line', 'line', 'line', 'line');
     let relation = rng.pick(options);
     if (relation === 'gap' && lines.at(-1).length >= (config.fragments ?? 4)) relation = 'flow';
     if (relation === 'line') lines.push([[item]]);
@@ -69,8 +69,9 @@ export function planCompact(config) {
     for (const group of groups) {
       const multi = group.length > 1;
       // Slack on the input line becomes distance to the cursor; keep it small.
+      // Elsewhere the reservation holds a bed's dissolving edge or a texture.
       const quiet = follow && index === lines.length - 1 || group !== groups.at(-1);
-      const allowance = (quiet ? 2 : 4) + (multi ? 2 : 0);
+      const allowance = (quiet ? 3 : 6) + (multi ? 2 : 0);
       const cells = group.reduce((n, item) => n + item.width, 0)
         + joins.filter((join) => group.some((item) => item.id === join.between[1])).reduce((n, join) => n + joinWidth[join.kind], 0);
       const cluster = { id: clusters.length, line: index, items: group.map((item) => item.id), cells, allowance, lead: 0, x: 0, at: 0, width: 0 };
@@ -90,8 +91,12 @@ export function planCompact(config) {
   const gaps = clusters.map(() => rng.int(1, 3));
   const right = clusters.map(() => rng.chance((config.spread ?? 0.5) * 0.7));
   const relations = plannedLines.map(() => rng.int(2, 4));
-  const detail = !follow && plannedLines.length < textRows && complexity >= 4 && rng.chance(0.55) ? { width: rng.int(4, 10) } : null;
-  const plan = { height, follow, attach, items, joins, clusters, lines: plannedLines, detail, marker: { row: 0, x: 0 } };
+  // Texture room. A strip row needs a row the height budget can spare; a tail
+  // continues a line's texture past its last reservation. Paint comes later.
+  const spare = height - plannedLines.length - (follow ? 0 : 1);
+  const strip = spare > 0 && rng.chance(0.85) ? { position: follow || rng.chance(0.5) ? 'above' : 'below', width: rng.int(12, 30), shift: rng.int(0, 2) } : null;
+  const reach = plannedLines.map(() => rng.int(6, 16));
+  const plan = { height, follow, attach, items, joins, clusters, lines: plannedLines, strip, top: strip?.position === 'above' ? 1 : 0, tails: [], marker: { row: 0, x: 0 } };
   const shape = { indent, gaps, right, relations };
   // Lay out with the sampled relations, then repair only what does not fit:
   // narrower paths, smaller allowances, simpler relations, then narrower names.
@@ -108,12 +113,21 @@ export function planCompact(config) {
     // A line inherits its x from the lines above, so simplify any of them.
     else if (plan.lines.slice(1, problem.line + 1).some((line) => line.relation !== 'align')) plan.lines.slice(1, problem.line + 1).findLast((line) => line.relation !== 'align').relation = 'align';
     else if (right.some(Boolean)) right.fill(false);
-    else if (plan.follow && plan.lines.length < plan.height) { plan.follow = false; plan.attach = 'bare'; }
+    else if (plan.follow && plan.lines.length < plan.height && !plan.strip) { plan.follow = false; plan.attach = 'bare'; }
     else if (shape.indent && plan.attach !== 'rail') shape.indent = 0;
     else if (directory && directory.width > 6) { directory.width--; recount(plan); }
     else if (user && user.width > 4) { user.width--; recount(plan); }
     else break;
   }
+  // A tail ends a line, except where an elbow, a step, or command entry does.
+  plan.tails = plannedLines.map((line, i) => {
+    const last = clusters[line.clusters.at(-1)];
+    if (last.at || plan.follow && line === lastLine || plan.attach === 'hook' && line === lastLine) return null;
+    if (line.clusters.length === 1 && plannedLines[i + 1]?.relation === 'step') return null;
+    const length = Math.min(reach[i], 78 - last.x - last.width);
+    return length >= 4 ? { cluster: last.id, length } : null;
+  });
+  if (plan.strip) plan.strip.width = Math.min(plan.strip.width, 78 - plan.strip.x);
   return plan;
 }
 
@@ -123,6 +137,10 @@ function recount(plan) {
       + plan.joins.filter((join) => cluster.items.includes(join.between[1])).reduce((n, join) => n + joinWidth[join.kind], 0);
   }
 }
+
+// Planning rows: an optional strip above, the text lines, an optional strip
+// below, then command entry unless it follows the last line.
+const rowOf = (plan, line) => plan.top + line;
 
 function layout(plan, { indent, gaps, right, relations }) {
   const { clusters, lines } = plan;
@@ -147,10 +165,14 @@ function layout(plan, { indent, gaps, right, relations }) {
   }
   const last = clusters[lines.at(-1).clusters.at(-1)];
   const end = last.x + last.width;
-  plan.rows = lines.length + (plan.follow ? 0 : 1) + (plan.detail ? 1 : 0);
-  plan.marker = plan.follow ? { row: lines.length - 1, x: end }
+  const below = plan.strip?.position === 'below' ? 1 : 0;
+  plan.rows = plan.top + lines.length + below + (plan.follow ? 0 : 1);
+  plan.marker = plan.follow ? { row: rowOf(plan, lines.length - 1), x: end }
     : { row: plan.rows - 1, x: plan.attach === 'rail' ? 2 : plan.attach === 'hook' ? end + 2 : plan.attach === 'align' ? clusters[0].x : 0 };
-  if (plan.detail) Object.assign(plan.detail, { row: lines.length, x: clusters[lines.at(-1).clusters[0]].x });
+  if (plan.strip) {
+    const near = clusters[lines[below ? lines.length - 1 : 0].clusters[0]];
+    Object.assign(plan.strip, { row: below ? rowOf(plan, lines.length) : 0, x: near.x + plan.strip.shift });
+  }
 }
 
 function check(plan) {
@@ -165,32 +187,38 @@ function check(plan) {
 }
 
 // Atomic treatments compete for one visual budget. A treatment never changes
-// a reservation: it must fit the cells its cluster or item already holds.
+// a reservation: it must fit the cells its cluster or item already holds, or
+// the tail and strip room the plan set aside.
 export function proposeCompact(plan, config) {
   const seed = config.roleSeed ?? config.seed;
   const rng = random(seed, 'structure:relations-v8:treatments');
   const preference = random(seed, 'structure:relations-v8:preference');
   const weight = config.weight ?? 0.3, complexity = config.complexity ?? 3;
   // The prompt engine prefers line treatments; surface spends more on fill.
+  // Any weight affords one quiet gesture, such as a rhythm or a short tail.
   const lineWork = config.engine === 'prompt';
-  const budgets = { fill: Math.round(weight ** 1.3 * 46 * (lineWork ? 0.35 : 1)), edge: Math.round(weight * 28), treatments: weight === 0 ? 0 : Math.ceil(weight * 3.5) };
+  const budgets = { fill: Math.round(weight ** 1.3 * 46 * (lineWork ? 0.35 : 1)), edge: weight ? Math.max(4, Math.round(weight * 28)) : 0, treatments: weight === 0 ? 0 : Math.ceil(weight * 3.5) };
   const estimate = (ids) => ids.reduce((n, id) => n + Math.min(plan.items[id].width, plan.items[id].role === 'directory' ? 14 : 5), 0);
   const proposals = [];
   const add = (proposal, bias) => proposals.push({ id: proposals.length, ...proposal, priority: Number((preference.next() + bias).toFixed(6)) });
   for (const cluster of plan.clusters) {
     const multi = cluster.items.length > 1;
     // Leaving text bare is a treatment too; it competes for the cluster.
-    add({ level: 'cluster', target: `cluster:${cluster.id}`, cluster: cluster.id, op: 'bare', cells: 0, fill: 0, edge: 0 }, (1 - weight) * 0.75);
+    add({ level: 'cluster', target: `cluster:${cluster.id}`, cluster: cluster.id, op: 'bare', cells: 0, fill: 0, edge: 0 }, (1 - weight) * 0.7);
     for (let attempt = 0; attempt < 2 + Math.floor(complexity / 4); attempt++) {
-      const op = rng.pick(multi ? ['pill', 'segmented', 'segmented', 'bracket', 'tag', 'edge'] : ['pill', 'pill', 'bracket', 'tag', 'edge']);
+      const op = rng.pick(multi ? ['bed', 'pill', 'segmented', 'segmented', 'bracket', 'tag', 'edge'] : ['bed', 'bed', 'pill', 'bracket', 'tag', 'edge']);
       const padded = ['pill', 'segmented', 'bracket'].includes(op) && rng.chance(0.4);
-      const cells = op === 'segmented' ? 4 : padded ? 4 : frameCells[op];
-      const fill = ['pill', 'segmented'].includes(op) ? estimate(cluster.items) + (padded || op === 'segmented' ? 2 : 0) : 0;
-      add({ level: 'cluster', target: `cluster:${cluster.id}`, cluster: cluster.id, op, padded: padded || op === 'segmented', cells, fill, edge: ['pill', 'segmented'].includes(op) ? 2 : cells / 2 }, { pill: weight * (lineWork ? 0.2 : 0.55), segmented: weight * (lineWork ? 0.15 : 0.45), bracket: lineWork ? 0.3 : 0.22, tag: 0.12, edge: lineWork ? 0.15 : 0.06 }[op]);
+      // A bed is a gradient under the text that dissolves into a left edge
+      // of one or two cells; its right side is the reservation's own texture.
+      const cap = op === 'bed' ? rng.int(1, 2) : 0;
+      const cells = op === 'bed' ? cap + 1 : op === 'segmented' ? 4 : padded ? 4 : frameCells[op];
+      const fill = op === 'bed' ? estimate(cluster.items) + 4 : ['pill', 'segmented'].includes(op) ? estimate(cluster.items) + (padded || op === 'segmented' ? 2 : 0) : 0;
+      add({ level: 'cluster', target: `cluster:${cluster.id}`, cluster: cluster.id, op, padded: padded || op === 'segmented', cap, cells, fill, edge: ['pill', 'segmented', 'bed'].includes(op) ? 2 : cells / 2 },
+        { bed: weight * (lineWork ? 0.2 : 0.6), pill: weight * (lineWork ? 0.15 : 0.35), segmented: weight * (lineWork ? 0.1 : 0.35), bracket: lineWork ? 0.25 : 0.15, tag: 0.1, edge: lineWork ? 0.12 : 0.05 }[op]);
     }
     if (multi && complexity >= 4) for (const id of cluster.items) {
       const op = rng.pick(['bracket', 'pill', 'tag']);
-      add({ level: 'item', target: `item:${id}`, cluster: cluster.id, item: id, op, cells: 2, fill: op === 'pill' ? estimate([id]) : 0, edge: op === 'tag' ? 1 : 2 }, 0.1);
+      add({ level: 'item', target: `item:${id}`, cluster: cluster.id, item: id, op, cells: 2, fill: op === 'pill' ? estimate([id]) : 0, edge: op === 'tag' ? 1 : 2 }, 0.05);
     }
   }
   // A leader carries the eye from text to the next fixed element. Corridors
@@ -200,9 +228,12 @@ export function proposeCompact(plan, config) {
     const next = plan.clusters[line.clusters[i + 1]];
     const kind = next ? (next.at ? null : 'gap') : line === plan.lines.at(-1) && plan.follow ? 'follow' : null;
     const path = plan.clusters[id].items.some((item) => plan.items[item].role === 'directory');
-    if (kind) add({ level: 'link', target: `leader:${id}`, cluster: id, op: 'leader', kind, cells: 0, fill: 0, edge: kind === 'follow' ? 1 : 3 }, kind === 'follow' ? (path ? 2 : 0.35) : path ? 0.6 : 0.25);
+    if (kind) add({ level: 'link', target: `leader:${id}`, cluster: id, op: 'leader', kind, cells: 0, fill: 0, edge: kind === 'follow' ? 1 : 3 }, kind === 'follow' ? (path ? 2 : 1) : path ? 0.6 : 0.25);
   }
-  if (plan.detail) add({ level: 'detail', target: 'detail', op: 'motif', cells: 0, fill: 0, edge: Math.ceil(plan.detail.width / 2) }, 0.15);
+  for (const tail of plan.tails.filter(Boolean)) add({ level: 'link', target: `tail:${tail.cluster}`, cluster: tail.cluster, op: 'tail', cells: 0, fill: 0, edge: Math.ceil(tail.length / 4) }, 0.45);
+  if (plan.strip) add({ level: 'row', target: 'strip', op: 'strip', cells: 0, fill: 0, edge: Math.ceil(plan.strip.width / 4) }, 0.25 + weight * 0.45);
+  // A right-prompt accent is occasional; on every prompt it became a habit.
+  if (!config.band && rng.chance(0.3)) add({ level: 'right', target: 'accent', op: 'accent', cells: 0, fill: 0, edge: 2 }, weight * 0.3);
   const used = { fill: 0, edge: 0, treatments: 0 }, accepted = [];
   const taken = new Map();
   for (const proposal of [...proposals].sort((a, b) => b.priority - a.priority || a.id - b.id)) {
@@ -211,11 +242,13 @@ export function proposeCompact(plan, config) {
     const inner = cluster ? accepted.filter((p) => p.cluster === proposal.cluster && p.level === 'item') : [];
     let reason;
     if (taken.has(proposal.target) || proposal.level === 'cluster' && taken.has(`cluster:${proposal.cluster}`)) reason = 'target-already-treated';
-    else if (used.treatments >= budgets.treatments) reason = 'treatment-budget';
+    else if (!['link', 'bare'].includes(proposal.level) && proposal.op !== 'bare' && used.treatments >= budgets.treatments) reason = 'treatment-budget';
     else if (used.fill + proposal.fill > budgets.fill || used.edge + proposal.edge > budgets.edge) reason = 'visual-weight-budget';
+    // One large gesture per prompt: a bed or a strip, not both.
+    else if (proposal.op === 'strip' && accepted.some((p) => p.op === 'bed') || proposal.op === 'bed' && taken.has('strip')) reason = 'one-gesture';
     // Nested fills would hide each other; a segmented pill owns its items.
-    else if (proposal.level === 'item' && host && ['pill', 'segmented'].includes(host.op)) reason = 'inside-surface';
-    else if (proposal.level === 'cluster' && ['pill', 'segmented'].includes(proposal.op) && inner.length) reason = 'contains-treatment';
+    else if (proposal.level === 'item' && host && ['pill', 'segmented', 'bed'].includes(host.op)) reason = 'inside-surface';
+    else if (proposal.level === 'cluster' && ['pill', 'segmented', 'bed'].includes(proposal.op) && inner.length) reason = 'contains-treatment';
     else if (cluster && proposal.cells + (proposal.level === 'cluster' ? inner : host ? [host] : []).reduce((n, p) => n + p.cells, 0)
       + accepted.filter((p) => p.cluster === proposal.cluster && p.level === 'item' && proposal.level === 'item').reduce((n, p) => n + p.cells, 0) > cluster.allowance) reason = 'no-room';
     proposal.accepted = !reason; proposal.reason = reason ?? 'accepted';
@@ -223,21 +256,27 @@ export function proposeCompact(plan, config) {
     accepted.push(proposal);
     taken.set(proposal.target, proposal);
     if (proposal.level === 'cluster') taken.set(`cluster:${proposal.cluster}`, proposal);
-    used.fill += proposal.fill; used.edge += proposal.edge; used.treatments += ['link', 'bare'].includes(proposal.level) || proposal.op === 'bare' ? 0 : 1;
+    used.fill += proposal.fill; used.edge += proposal.edge; used.treatments += proposal.level === 'link' || proposal.op === 'bare' ? 0 : 1;
   }
   return { budgets, used, proposals, accepted };
 }
+
+const inkOf = (cell) => !cell ? 0 : cell.bg ? { fg: cell.fg ?? cell.bg, bg: cell.bg, exact: true } : cell.fg;
 
 export function composeRelationsV8(config) {
   const plan = planCompact(config);
   const treatment = proposeCompact(plan, config);
   const material = random(config.roleSeed ?? config.seed, 'material:relations-v8');
   const ornament = random(config.ornamentSeed ?? config.seed, 'ornament:relations-v8');
+  const fork = (key) => random(config.ornamentSeed ?? config.seed, `ornament:relations-v8:${key}`);
   const lines = materials[config.material ?? 'rounded'];
   const alphabet = alphabets[config.alphabet ?? 'geometric'];
+  const ascii = config.glyphs === 'ascii';
+  const weight = config.weight ?? 0.3;
   const dark = config.colors?.length > 6 ? 6 : 0;
   const inks = material.chance(0.65) ? { username: 2, directory: 3, label: 4 } : { username: 3, directory: 2, label: 4 };
   const stroke = material.pick([0, 1, 1]);
+  const colors = palette(config.colors, material);
   const surface = () => material.chance(0.6) ? { bg: dark, dark: true } : { bg: material.pick([2, 3, 4]), dark: false };
   const marker = ornament.pick(['›', '›', '❯', '>', '▸', '»']);
   const cap = (side) => ornament.pick(side === 'left' ? ['◖', '▐', '▐', ' ', ' '] : ['◗', '▌', '▌', ' ', ' ']);
@@ -246,23 +285,49 @@ export function composeRelationsV8(config) {
   const innerPair = pair[0] === '[' ? ['(', ')'] : ['[', ']'];
   const socket = ornament.chance(0.4);
   const tags = config.alphabet === 'geometric' ? alphabet.atoms.filter((atom) => atom !== '·') : ['▪', '•', '◆', '▸', '◇'];
-  // One leader per composition keeps lines of different lengths related. It
-  // may be a plain line, dots, or a rhythm cut from the shared motif.
-  const solid = config.material === 'dashed' ? '─' : lines[10];
-  const shared = deriveMotif(config.motifSeed ?? config.seed);
-  const beat = evolveMotif(shared, { width: ornament.int(3, 6), step: 1 }).cells;
-  const cut = Array.from({ length: Math.max(...beat.map((cell) => cell.x)) + 2 }, (_, x) => beat.some((cell) => cell.x === x) ? beat.find((cell) => cell.x === x).kind === 'mark' ? '·' : solid : ' ');
-  const rhythm = [...cut.slice(cut.findIndex((glyph) => glyph !== ' ')), ...cut.slice(0, cut.findIndex((glyph) => glyph !== ' '))].join('');
-  const leaderGlyph = ornament.pick((config.density ?? 0.5) > 0.45 ? [lines[10], lines[10], rhythm, '·', `${solid} `] : [lines[10], rhythm, '·', '· ', '╌']);
+  // One idea per prompt. Quiet prompts carry a single rhythm; others one
+  // texture, repeated wherever the plan left room: leaders, tails, a strip,
+  // and the right accent. Ornament chooses it, so geometry never depends on it.
+  const quiet = weight < 0.25;
+  // Surface leans on filled material, prompt on line work. Sprigs read too
+  // faintly in one row; the strongest one-row kinds lead.
+  const idea = quiet ? null : ornament.pick(config.engine === 'prompt'
+    ? ['wave', 'wave', 'truchet', 'truchet', 'maze', 'automaton']
+    : ['ridge', 'ridge', 'automaton', 'automaton', 'dissolve', 'wave', 'truchet']);
+  const beat = rhythm(ornament.pick(rhythmKinds), fork('rhythm'), { colors, ascii });
+  // A wave swings away from its anchor, so it leaves the text; seeded or
+  // sprouting kinds would stay hidden under it and fill the canvas instead.
+  const strip = (key, width, { anchor } = {}) => texture(idea, fork(key), { width, rows: 1, colors, ascii, ...(idea === 'wave' ? { anchor } : {}) })[0];
+  // Lines carry a gradient toward command entry rather than one flat ink.
+  const glow = ramp([mix(colors.quiet, colors.ground, 0.2), colors.stops.at(-1)], 6);
   const scene = new Scene(plan.rows, config.glyphs);
-  const paintLinks = (config.weight ?? 0.3) > 0;
+  const paintLinks = weight > 0;
   const byTarget = new Map(treatment.accepted.map((p) => [p.target, p]));
-  const paint = [];
-  const roles = [];
+  // A bed is then the prompt's one idea; other canvases keep a quiet rhythm.
+  const bedded = treatment.accepted.some((p) => p.op === 'bed');
+  const paint = [], roles = [];
   for (const cluster of plan.clusters) {
-    const frame = byTarget.get(`cluster:${cluster.id}`)?.op === 'bare' ? null : byTarget.get(`cluster:${cluster.id}`) ?? null;
-    const leader = byTarget.get(`leader:${cluster.id}`);
-    const fill = frame && ['pill', 'segmented'].includes(frame.op) ? surface() : null;
+    const chosen = byTarget.get(`cluster:${cluster.id}`);
+    const frame = chosen?.op === 'bare' ? null : chosen ?? null;
+    const leader = byTarget.get(`leader:${cluster.id}`), tail = byTarget.get(`tail:${cluster.id}`);
+    const line = plan.lines[cluster.line], row = rowOf(plan, cluster.line);
+    const next = plan.clusters[line.clusters[line.clusters.indexOf(cluster.id) + 1]];
+    // The canvas: the reservation plus any gap or tail it continues into. A
+    // bed is a plate hugging the text: it glows into command entry, or ends a
+    // few cells past the text it expects in a dithered edge, then goes quiet.
+    const isBed = frame?.op === 'bed';
+    const extra = tail && !isBed ? plan.tails[cluster.line].length : leader && next ? Math.max(0, next.x - 1 - cluster.x - cluster.width) : 0;
+    let bed = null;
+    if (isBed) {
+      const into = leader && !next, span = cluster.width + extra;
+      const plate = into ? span : Math.min(span, frame.cap + 1 + cluster.items.reduce((n, id) => n + Math.min(plan.items[id].width, plan.items[id].role === 'directory' ? 16 : 6), 0) + 6);
+      bed = texture('gradient', fork(`bed:${cluster.id}`), { width: plate, rows: 1, colors, ascii, anchor: plate - 1 })[0];
+      const edge = bed.at(-1)?.bg ?? colors.ground;
+      bed = [...bed, ...(ascii ? [':', '.'] : ['▓', '▒', '░']).map((ch) => ({ ch, fg: edge }))].slice(0, span);
+      while (bed.length < span) bed.push(null);
+    }
+    const base = bed ? { bg: bed[frame.cap + 1]?.bg ?? colors.ground, dark: true } : null;
+    const fill = base ?? (frame && ['pill', 'segmented'].includes(frame.op) ? surface() : null);
     const second = frame?.op === 'segmented' ? (fill.dark ? { bg: material.pick([2, 3, 4]), dark: false } : { bg: dark, dark: true }) : null;
     const ink = (item, finish = fill) => finish ? { fg: finish.dark ? inks[item.role] : 'contrast', bg: finish.bg } : inks[item.role];
     const capInk = (finish) => finish.bg;
@@ -274,7 +339,11 @@ export function composeRelationsV8(config) {
       if (frame.padded) parts.push({ text: ' ', ink: 0 });
     } else if (frame?.op === 'tag') parts.push({ text: `${ornament.pick(tags)} `, ink: 4 });
     else if (frame?.op === 'edge') parts.push({ text: `${ornament.pick([lines[5], '▌', '┃'])} `, ink: bracketInk });
-    else if (fill) {
+    else if (bed) {
+      // The bed's left edge dissolves into the terminal through dither.
+      parts.push({ text: ['░', '▒', '▓'].slice(-frame.cap).join(''), ink: base.bg });
+      parts.push({ text: ' ', ink: { fg: base.bg, bg: base.bg } });
+    } else if (fill) {
       parts.push({ text: cap('left'), ink: capInk(fill) });
       if (frame.padded) parts.push({ text: ' ', ink: ink(plan.items[cluster.items[0]]) });
     }
@@ -309,62 +378,87 @@ export function composeRelationsV8(config) {
     if (frame?.op === 'bracket') {
       if (frame.padded) parts.push({ text: ' ', ink: 0 });
       parts.push({ text: brackets[1], ink: bracketInk });
-    } else if (fill) {
+    } else if (fill && !bed) {
       const end = second ?? fill;
       if (frame.padded) parts.push({ text: ' ', ink: ink(plan.items[cluster.items.at(-1)], end) });
       parts.push({ text: cap('right'), ink: capInk(end) });
     }
-    if (cluster.lead) parts.push({ text: ' ', ink: 0 });
+    if (cluster.lead) parts.push({ text: ' ', ink: bed ? { fg: base.bg, bg: base.bg } : 0 });
     // A step or elbow continues from this cluster's end, so its pad is line.
-    const line = plan.lines[cluster.line];
     const elbow = paintLinks && (plan.attach === 'hook' && cluster.id === plan.lines.at(-1).clusters.at(-1)
       || line.clusters[0] === cluster.id && plan.lines[line.row + 1]?.relation === 'step');
-    const pad = leader ? { text: leaderGlyph, ink: stroke } : elbow ? { text: lines[10], ink: stroke } : { text: ' ', ink: 0 };
-    const x = place(cluster.x, cluster.at), row = cluster.line;
+    // The reservation reveals one strip from its first cell, so a texture
+    // continues behind the text and appears wherever the text ends.
+    const span = cluster.width + extra;
+    let cells = null, pad = { text: ' ', ink: 0 }, canvas = null;
+    if (bed) { cells = bed; canvas = 'bed'; }
+    else if ((leader || tail) && idea && !bedded) { cells = strip(`pad:${cluster.id}`, span, { anchor: tail ? 0 : span - 1 }); canvas = idea; }
+    else if (leader || tail) {
+      canvas = 'rhythm';
+      // A quiet rhythm, phased from the cluster's first cell.
+      const glyphs = [...beat.text];
+      cells = Array.from({ length: span }, (_, x) => glyphs[x % glyphs.length] === ' ' ? null : { ch: glyphs[x % glyphs.length], fg: beat.ink });
+      // A tail thins out through an ordered threshold, never adding cells.
+      if (tail) cells = cells.map((cell, x) => x < cluster.width || (x * 7 % 11) / 11 < 1 - (x - cluster.width) / extra ? cell : null);
+    } else if (elbow) canvas = 'elbow', cells = Array.from({ length: span }, (_, x) => ({ ch: lines[10], fg: glow[Math.min(glow.length - 1, Math.floor(x / span * glow.length))] }));
+    if (cells) pad = { text: cells.slice(0, cluster.width).map((cell) => cell?.ch ?? ' ').join(''), ink: cells.slice(0, cluster.width).map(inkOf) };
+    const x = place(cluster.x, cluster.at);
     if (cluster.items.every((id) => plan.items[id].role === 'label')) {
-      const text = parts.map((part) => part.text).join('');
+      // Static text has a known end; the canvas after it is painted directly.
+      const text = parts.map((part) => part.text).join(''), length = [...text].length;
       parts.forEach((part, i) => scene.text(row, place(cluster.x + [...parts.slice(0, i).map((p) => p.text).join('')].length, cluster.at), part.text, part.ink));
-      scene.fill(row, place(cluster.x + [...text].length, cluster.at), place(cluster.x + cluster.width, cluster.at), pad.text, pad.ink);
+      if (cells) emit(scene, [cells.slice(length, cluster.width)], fixed(cluster.at, cluster.x + length - Math.floor(cluster.at * 78 / 1000)), row);
     } else scene.live(row, x, cluster.width, parts, pad);
+    if (cells && extra) emit(scene, [cells.slice(cluster.width, cluster.width + extra)], fixed(0, cluster.x + cluster.width), row);
     roles.push({ id: cluster.id, row, x: cluster.x, width: cluster.width, at: cluster.at });
-    paint.push({ cluster: cluster.id, frame: frame?.op ?? null, fill: fill?.bg ?? null, second: second?.bg ?? null, leader: pad.text.trim() ? pad.text : null });
-    // Leaders continue across a gap up to one quiet cell before the next cluster.
-    const next = plan.clusters[line.clusters[line.clusters.indexOf(cluster.id) + 1]];
-    if (leader && next && next.x - 1 > cluster.x + cluster.width) {
-      // Continue a patterned leader in phase with the pad it extends.
-      const glyphs = [...pad.text], phase = cluster.width % glyphs.length;
-      scene.fill(row, place(cluster.x + cluster.width), place(next.x - 1, next.at), [...glyphs.slice(phase), ...glyphs.slice(0, phase)].join(''), stroke);
-    }
+    paint.push({ cluster: cluster.id, frame: frame?.op ?? null, fill: fill?.bg ?? null, second: second?.bg ?? null,
+      canvas, extra });
   }
-  // Connections between lines and to command entry.
+  // Connections between lines and to command entry, lit toward the cursor.
   const end = (cluster) => cluster.x + cluster.width;
+  const run = (y, x0, text, from = 0) => [...text].forEach((glyph, i) => scene.text(y, left(x0 + i), glyph, glow[Math.min(glow.length - 1, from + i)]));
   for (const line of paintLinks ? plan.lines.slice(1) : []) if (line.relation === 'step') {
     const above = plan.clusters[plan.lines[line.row - 1].clusters[0]];
-    scene.text(above.line, left(end(above)), lines[12], stroke);
-    scene.text(line.row, left(end(above)), lines[3] + lines[10], stroke);
+    run(rowOf(plan, above.line), end(above), lines[12], 4);
+    run(rowOf(plan, line.row), end(above), lines[3] + lines[10], 4);
   }
   if (paintLinks && plan.attach === 'rail') {
     // Each stub reaches one quiet cell before its line's text.
-    for (let row = 0; row < plan.rows; row++) {
-      const line = plan.lines[row], reach = line ? plan.clusters[line.clusters[0]].x - 2 : 1;
-      const text = row === 0 ? lines[6] : row === plan.marker.row ? lines[3] : line ? lines[7] : lines[5];
-      scene.text(row, left(0), text + (line || row === plan.marker.row ? lines[10].repeat(Math.max(1, reach)) : ''), stroke);
+    const first = rowOf(plan, 0);
+    for (let y = first; y < plan.rows; y++) {
+      const line = plan.lines.find((l) => rowOf(plan, l.row) === y), reach = line ? plan.clusters[line.clusters[0]].x - 2 : 1;
+      const corner = y === first ? lines[6] : y === plan.marker.row ? lines[3] : line ? lines[7] : lines[5];
+      run(y, 0, corner + (line || y === plan.marker.row ? lines[10].repeat(Math.max(1, reach)) : ''), Math.round((y - first) / Math.max(1, plan.rows - 1 - first) * 4));
     }
   }
   if (paintLinks && plan.attach === 'hook') {
     const last = plan.clusters[plan.lines.at(-1).clusters.at(-1)];
-    scene.text(last.line, left(end(last)), lines[12], stroke);
-    scene.text(plan.marker.row, left(end(last)), lines[3] + lines[10], stroke);
+    run(rowOf(plan, last.line), end(last), lines[12], 4);
+    run(plan.marker.row, end(last), lines[3] + lines[10], 4);
   }
-  let motif = null;
-  if (plan.detail && byTarget.has('detail')) {
-    motif = evolveMotif(deriveMotif(config.motifSeed ?? config.seed), { width: plan.detail.width, step: plan.clusters.length - 1 });
-    // Quiet marks with one accent, so the rhythm reads as a rule, not text.
-    const accent = ornament.pick(tags);
-    for (const cell of motif.cells) scene.text(plan.detail.row, left(plan.detail.x + cell.x), cell.kind === 'mark' ? cell.tone === 3 ? accent : '·' : lines[cell.bits] || '·', cell.kind === 'mark' && cell.tone === 3 ? 4 : stroke);
+  // A strip row hangs above or below the text, growing from its start.
+  if (plan.strip && byTarget.has('strip')) {
+    const { row, x, width } = plan.strip;
+    const cells = idea ? strip('strip', width, { anchor: 0 })
+      : Array.from({ length: width }, (_, i) => [...beat.text][i % [...beat.text].length] === ' ' ? null : { ch: [...beat.text][i % [...beat.text].length], fg: beat.ink });
+    emit(scene, [cells], fixed(0, x), row);
   }
   scene.text(plan.marker.row, left(plan.marker.x), marker, 4);
   scene.runs.at(-1).purpose = 'input';
+  // A short accent in the native right prompt: zsh hides it as typing nears.
+  let rightRuns = [];
+  if (byTarget.has('accent')) {
+    const width = ornament.int(6, 12);
+    const cells = idea && !bedded ? strip('accent', width, { anchor: width - 1 })
+      : Array.from({ length: width }, (_, i) => [...beat.text][i % [...beat.text].length] === ' ' ? null : { ch: [...beat.text][i % [...beat.text].length], fg: beat.ink });
+    for (const cell of cells) {
+      const glyph = !cell ? ' ' : cell.ch === ' ' ? (ascii ? '#' : '█') : cell.ch, color = cell ? cell.fg ?? cell.bg : null;
+      if (rightRuns.length && (color === null || rightRuns.at(-1).ink === color)) rightRuns.at(-1).text += glyph;
+      else rightRuns.push({ text: glyph, ink: color ?? colors.quiet });
+    }
+    rightRuns = rightRuns.filter((r, i, all) => r.text.trim() || i > 0 && i < all.length - 1);
+    if (rightRuns.length) { rightRuns[0].text = rightRuns[0].text.trimStart(); rightRuns.at(-1).text = rightRuns.at(-1).text.trimEnd(); }
+  }
   // Height is a budget: drop rows that nothing occupies.
   const used = [...new Set(scene.runs.map((run) => run.row))].sort((a, b) => a - b);
   const rowMap = Object.fromEntries(used.map((row, index) => [row, index]));
@@ -372,14 +466,14 @@ export function composeRelationsV8(config) {
   scene.rows = used.length;
   const placed = roles.map((role) => ({ ...role, row: rowMap[role.row] }));
   return {
-    scene, cursor: plan.marker.x + 2, rightPrompt: '',
+    scene, cursor: plan.marker.x + 2, rightPrompt: rightRuns.map((r) => r.text).join(''), ...(rightRuns.length ? { rightRuns } : {}),
     program: {
       engine: 'role-relations/3', lattice: { columns: 79, rows: plan.rows },
-      traits: { weight: config.weight ?? 0.3, material: config.material, alphabet: config.alphabet, density: config.density },
-      derivation: { ...plan, roles: placed, ...treatment }, annotations: { marker, motif: motif?.evolution ?? null }, paint, rowMap,
+      traits: { weight, material: config.material, alphabet: config.alphabet, density: config.density, idea: idea ?? 'rhythm', palette: colors.family },
+      derivation: { ...plan, roles: placed, ...treatment }, annotations: { marker, rhythm: beat.text }, paint, rowMap,
       interactions: { mode: 'roles', ports: rolePorts(placed), masks: roleMasks(placed), attachments: [] },
       stats: { fragments: plan.clusters.length, groups: plan.lines.length,
-        links: treatment.accepted.filter((p) => p.op === 'leader').length + (['rail', 'hook'].includes(plan.attach) ? 1 : 0) + plan.lines.filter((l) => l.relation === 'step').length,
+        links: treatment.accepted.filter((p) => ['leader', 'tail'].includes(p.op)).length + (['rail', 'hook'].includes(plan.attach) ? 1 : 0) + plan.lines.filter((l) => l.relation === 'step').length,
         filledCells: treatment.used.fill, edgeCells: treatment.used.edge, treatments: treatment.used.treatments,
         accepted: treatment.accepted.length, rejected: treatment.proposals.length - treatment.accepted.length,
         span: Math.max(...plan.clusters.map((c) => c.at ? 79 : c.x + c.width)) },

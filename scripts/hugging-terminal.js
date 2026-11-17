@@ -49,9 +49,11 @@ export function testHugging({ tui, state, check, eventually, snapshot, output, c
   }
   check(ends.size >= 2, 'hugging bracket did not move with the directory length');
 
-  // Version-8 compact relations as live prompts: a leader into the cursor, an
-  // elbow, a segmented pill, a split line, a stepped line, and a rail.
-  const relations = [['live-v8/2', 'prompt'], ['live-v8/1', 'surface'], ['live-v8/3', 'surface'], ['live-v8/14', 'prompt'], ['live-v8/15', 'surface'], ['live-v8/30', 'prompt']];
+  // Version-8 compact relations as live prompts: a textured leader into the
+  // cursor, an elbow, a segmented pill, a split line, a stepped line, a rail,
+  // a gradient bed, a texture strip, and a right-prompt accent.
+  const relations = [['live-v8/2', 'prompt'], ['live-v8/1', 'surface'], ['live-v8/3', 'surface'], ['live-v8/14', 'prompt'], ['live-v8/15', 'surface'],
+    ['live-v8/30', 'prompt'], ['live-v8/6', 'prompt'], ['live-v8/32', 'prompt'], ['live-v8/0', 'prompt']];
   tui('resize', '120', '24');
   for (const [seed, engine] of relations) {
     const compact = createDesign({ seed, engine });

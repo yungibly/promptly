@@ -265,8 +265,9 @@ try {
     check(specimen.version >= 7, `${specimen.seed}: consecutive review must exercise the new relation composer`);
     check(state().cursor.x === specimen.cursor && state().cursor.y === specimen.scene.rows - 1, `${specimen.seed}: relation input anchor drifted`);
     check(normalize(state().text) === normalize(preview(specimen, { width: 120, color: false })), `${specimen.seed}: relation preview differs from exported prompt`);
-    // Version 8 rails and elbows use line corners; filled contours stay retired.
-    check(!/[▗▖▝▘▄▀]/u.test(state().text), `${specimen.seed}: fresh compact composition restored filled top/bottom contours`);
+    // Version 8 rails use corners and textures use half-blocks; the quadrant
+    // contours of retired version-5 surfaces stay retired.
+    check(!/[▗▖▝▘]/u.test(state().text), `${specimen.seed}: fresh compact composition restored filled top/bottom contours`);
     tui('type', 'echo layout');
     settle();
     check(state().cursor.x === specimen.cursor + 11, `${specimen.seed}: relation editing cursor drifted`);
