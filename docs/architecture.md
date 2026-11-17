@@ -459,6 +459,11 @@ sampling while every earlier family stays reachable.
   placement. A stretched logical column is exactly one cell at 80 columns and
   widens with the terminal; `ceil(k * 1000 / 78)` anchors collapse a column at
   only one terminal width. Ramps interpolate palette colors in OKLCH.
+- `texture.js` supplies small textures for compact prompts: `texture(kind, rng,
+  { width, rows, colors, ascii, fade, anchor })` returns a raster grid for
+  `emit`, and `rhythm(kind, rng, { colors, ascii })` a short periodic pattern
+  and ink for responsive pads. Kinds read at 6–40 cells and one or two rows.
+  ASCII keeps the exact occupied cells and chooses a glyph for each cell's shape.
 - `stage.js` places the live roles and the input marker. Systems read role
   rectangles as windows, obstacles, valleys, or sources, and paint slots last.
 - `field`: layered horizons whose valley opens under the text (mirror symmetry
