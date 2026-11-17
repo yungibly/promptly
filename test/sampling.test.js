@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createDesign, recipe, fromRecipe, mutateDesign } from '../src/design.js';
+import { createDesign, recipe, fromRecipe, mutateDesign, LATEST } from '../src/design.js';
 import { compile } from '../src/compile.js';
+import { random } from '../src/random.js';
+import { engines as table } from '../src/engines.js';
 
 const engines = ['surface', 'prompt', 'assembly', 'network'];
 const cli = fileURLToPath(new URL('../bin/promptly.js', import.meta.url));
@@ -16,7 +18,7 @@ test('fresh default sampling reaches the full complexity range in every procedur
   let compactDetailed = false, tallSimple = false;
   for (let i = 0; i < 480; i++) {
     const design = createDesign({ seed: `full-range/${i}` });
-    assert.equal(design.version, 7);
+    assert.equal(design.version, LATEST);
     assert.ok(Number.isInteger(design.complexity) && design.complexity >= 1 && design.complexity <= 10);
     levels[design.engine].add(design.complexity);
     counts[design.complexity]++;
@@ -101,7 +103,7 @@ test('bare and seed-only CLI exports contain complete resolved recipes', () => {
     const line = result.stdout.match(/^# Recipe: (.+)$/m);
     assert.ok(line, 'source includes its recipe');
     const saved = JSON.parse(line[1]);
-    assert.equal(saved.version, 7);
+    assert.equal(saved.version, LATEST);
     assert.ok(engines.includes(saved.engine));
     assert.ok(Number.isInteger(saved.complexity) && saved.complexity >= 1 && saved.complexity <= 10);
     assert.ok(Number.isInteger(saved.height));
@@ -118,4 +120,18 @@ test('bare and seed-only CLI exports contain complete resolved recipes', () => {
   assert.equal(invalid.status, 1);
   assert.equal(invalid.stdout, '');
   assert.match(invalid.stderr, /Complexity/);
+});
+
+test('version 8 keeps legacy engine choices stable and samples only mark-like alphabets', () => {
+  for (let i = 0; i < 64; i++) {
+    const seed = `engine-table/${i}`;
+    const old = createDesign({ version: 7, seed });
+    assert.equal(old.engine, random(seed, 'trait:engine').pick(engines), 'v7 automatic engine moved');
+    const fresh = createDesign({ seed });
+    assert.equal(fresh.version, LATEST);
+    assert.ok(Object.hasOwn(table, fresh.engine));
+    assert.ok(['geometric', 'granular'].includes(fresh.alphabet), `${seed}: ${fresh.alphabet}`);
+  }
+  // Explicit alphabets remain available.
+  assert.equal(createDesign({ seed: 'explicit', alphabet: 'technical' }).alphabet, 'technical');
 });

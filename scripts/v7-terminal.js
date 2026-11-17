@@ -18,7 +18,7 @@ export function testV7({ tui, state, check, eventually, snapshot, output, cells 
     const file = `${output}/v7-feature-${index + 1}.zsh`;
     writeFileSync(file, compile(design));
     submit(`source ${quoteZsh(file)}; clear`);
-    check(design.version === 7, `${design.seed}: feature recipe is stale`);
+    check(design.version >= 7, `${design.seed}: feature recipe is stale`);
     eventually(() => normalize(state().text) === normalize(preview(design, { width: 120, color: false })), `${design.seed}: v7 source differs from preview`);
     check(state().cursor.x === design.cursor && state().cursor.y === design.scene.rows - 1, `${design.seed}: v7 cursor drifted`);
     check(state().text.includes(userInfo().username) && state().text.includes('promptly'), `${design.seed}: shared medium obscured live fields`);

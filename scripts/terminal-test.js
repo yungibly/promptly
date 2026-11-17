@@ -18,6 +18,12 @@ const root = resolve('.');
 const output = resolve('artifacts/terminal');
 const session = `promptly-test-${process.pid}`;
 mkdirSync(`${output}/zdot`, { recursive: true });
+// Startup files keep distribution zsh (e.g. Ubuntu) from launching its
+// interactive new-user wizard. Skipping global rc files keeps the shell
+// identical across macOS and Linux, so bind the one terminal key the checks
+// use that zsh does not bind by default.
+writeFileSync(`${output}/zdot/.zshenv`, 'unsetopt GLOBAL_RCS\n');
+writeFileSync(`${output}/zdot/.zshrc`, "bindkey -e\nbindkey '^[[3~' delete-char\n");
 
 function tui(...args) {
   const result = spawnSync(binary, ['--session', session, ...args], { encoding: 'utf8', timeout: 15000, maxBuffer: 16 * 1024 * 1024 });
@@ -44,7 +50,7 @@ function check(condition, message) {
 }
 
 function eventually(predicate, message) {
-  const deadline = Date.now() + 3000;
+  const deadline = Date.now() + 10000;
   do {
     if (predicate()) { checks++; return; }
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
@@ -308,7 +314,7 @@ try {
     const file = `${output}/relations-${i + 1}.zsh`;
     writeFileSync(file, compile(specimen));
     submit(`source ${quoteZsh(file)}; clear`);
-    check(specimen.version === 7, `${specimen.seed}: consecutive review must exercise the new relation composer`);
+    check(specimen.version >= 7, `${specimen.seed}: consecutive review must exercise the new relation composer`);
     check(state().cursor.x === specimen.cursor && state().cursor.y === specimen.scene.rows - 1, `${specimen.seed}: relation input anchor drifted`);
     check(normalize(state().text) === normalize(preview(specimen, { width: 120, color: false })), `${specimen.seed}: relation preview differs from exported prompt`);
     check(!/[╭╮╰╯▗▖▝▘▄▀]/u.test(state().text), `${specimen.seed}: fresh compact composition restored top/bottom curved contours`);
@@ -330,7 +336,7 @@ try {
     const file = `${output}/live-${engine}.zsh`;
     writeFileSync(file, compile(specimen));
     submit(`source ${quoteZsh(file)}; source ${quoteZsh(file)}; clear`);
-    check(specimen.version === 7, `${engine}: role-band test must use a new recipe`);
+    check(specimen.version >= 7, `${engine}: role-band test must use a new recipe`);
     check(state().text.includes(userInfo().username) && state().text.includes('promptly'), `${engine}: live username or directory missing`);
     check(state().cursor.x === specimen.cursor && state().cursor.y === specimen.scene.rows - 1, `${engine}: role-band input anchor drifted`);
     check(normalize(state().text) === normalize(preview(specimen, { width: 120, color: false })), `${engine}: role band differs from exported preview`);
@@ -389,7 +395,7 @@ try {
     check(result.status === 0, `default CLI export failed: ${result.stderr}`);
     const saved = JSON.parse(result.stdout.match(/^# Recipe: (.+)$/m)?.[1] ?? 'null');
     const specimen = fromRecipe(saved);
-    check(specimen.version === 7 && specimen.info && specimen.palette === 'generated', 'bare/seed-only CLI did not use fresh defaults');
+    check(specimen.version >= 7 && specimen.info && specimen.palette === 'generated', 'bare/seed-only CLI did not use fresh defaults');
     return { specimen, source: result.stdout };
   };
   const bare = exportDefault([]);
@@ -466,19 +472,20 @@ try {
 
   tui('resize', '120', '88');
   submit('clear; node bin/promptly.js gallery --seed possibility --width 120 --complexity 8 --count 8');
+  // `wait idle` can return while Node is still starting; wait for this gallery's own seeds.
+  eventually(() => state().text.includes('"possibility/'), 'gallery did not render');
   fitRows();
   snapshot('gallery');
-  check(state().text.includes('P R O M P T L Y'), 'gallery did not render');
   tui('resize', '120', '45');
   submit('clear; node bin/promptly.js gallery --engine prompt --seed closely --width 120 --complexity 8 --count 6');
+  eventually(() => state().text.includes('"closely/'), 'compact gallery did not render');
   fitRows();
   snapshot('prompt-gallery');
-  check(state().text.includes('P R O M P T L Y'), 'compact gallery did not render');
   tui('resize', '120', '45');
   submit('clear; node bin/promptly.js gallery --engine surface --seed open-medium --width 120 --complexity 8 --count 6');
+  eventually(() => state().text.includes('"open-medium/'), 'surface gallery did not render');
   fitRows();
   snapshot('surfaces');
-  check(state().text.includes('P R O M P T L Y'), 'surface gallery did not render');
   writeFileSync(`${output}/report.json`, JSON.stringify({ backend: 'ghostty', checks, explorer: explorerReport, v7: v7Report, styles: [...Object.keys(grammars), 'network', 'assembly', 'surface'], resizeWidths: [80, 40, 27, 160, 120], surfaceResizeWidths: [80, 79, 40, 28, 27, 120], liveRoleBands: { engines: ['assembly', 'network'], resizeWidths: [80, 40, 120] }, legacySurfaces: { version: 5, backgroundShapes: backgroundShapes.size, multicoloredSurfaces, contours: contours.map(([name]) => name) }, consecutiveSeeds: consecutive.map((specimen) => specimen.seed), defaults: { bareSeed: bare.specimen.seed, poolSize: defaultPool.length, consecutive: defaultBatch.map(({ specimen, metrics }) => ({ seed: specimen.seed, engine: specimen.engine, ...metrics })), extremes: [...defaultExtremes.values()].map(({ specimen, metrics, labels }) => ({ seed: specimen.seed, engine: specimen.engine, ...metrics, labels })), liveSeeds: defaultLive.map(({ specimen }) => specimen.seed) }, glyphModes: ['unicode', 'ascii', 'powerline'] }, null, 2) + '\n');
   console.log(`PASS ${checks} assertions. Captures: ${output}`);
 } catch (error) {
