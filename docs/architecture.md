@@ -53,6 +53,10 @@
   column offset)`. Rows are discrete. A fill's end is exclusive; text supports
   left/center/right alignment. A wire run connects two affine vertices and carries a
   material's 16-glyph connection table. Fixed-width slots reserve live text roles.
+  A hugging slot (`slot(..., options)` or the compound `live(row, x, width, parts,
+  pad)`) draws literal glyphs right after each live value and pads only the rest
+  of its reservation with a pad glyph or pattern, so brackets, caps, and leaders
+  follow the text while later columns stay fixed.
   Ink can be a palette index or a foreground/background pair. Later text overpaints
   wires, including spaces; spaces with a background are occupied artwork.
 - `src/flatten.js`: resolve ordered overlays and wire junctions into colored spans
@@ -119,6 +123,13 @@ username and current directory use native `%n` and `%~` prompt escapes. It never
 reads time, exit status, Git, or network state. `PROMPT_SUBST` selects precompiled
 strings and evaluates only parameter padding and integer arithmetic. Native prompt
 truncation and `%(l..)` conditions keep live fields inside fixed cell reservations.
+`%N(l..X)` draws X only while fewer than N cells precede it, so the unrolled
+condition for column N paints exactly that cell. Hugging runs emit each value
+(`%W<..<%~%<<`, or `%W>..>%n%>>` so names keep their start), then their literal
+parts, then conditions from the run's minimum printed width to its end. Each
+part contributes at least one cell; truncation widths exclude the literal parts.
+Pad glyphs are escaped for the conditional (`%%`, `%)`, and a `,` separator for
+`.`). zsh counts cells only in a UTF-8 locale, as for all Unicode art.
 There are no drawing loops, prompt callbacks, redraw widgets, signal traps, or
 command substitutions. zsh's own SIGWINCH prompt expansion immediately recalculates
 the gaps, so resizing does not need a cached canvas or a shell subprocess.

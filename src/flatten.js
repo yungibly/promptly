@@ -41,13 +41,14 @@ function textAt(span, width) {
 
 export function flatten({ scene, cursor }, width) {
   const rows = Array.from({ length: scene.rows }, () => [{ from: x(0), to: x(1000, 1), text: ' ', origin: x(0), ink: 0, edges: 0 }]);
-  const paint = (row, from, to, text, ink, mask = 0, role = undefined) => {
+  // Hugging parts belong to one live reservation; any overpaint drops them.
+  const paint = (row, from, to, text, ink, mask = 0, role = undefined, live = undefined) => {
     if (!rows[row] || !text.length) return;
-    rows[row] = overlay(rows[row], from, to, width, (old) => mask
+    rows[row] = overlay(rows[row], from, to, width, ({ parts, pad, ...old }) => mask
       ? { ...old, text: chars(text)[old.edges | mask], origin: from,
         ink: typeof old.ink === 'number' && typeof ink === 'number' ? Math.max(old.ink, ink) : ink,
         edges: old.edges | mask, role: undefined }
-      : { ...old, text, origin: from, ink, role });
+      : { ...old, text, origin: from, ink, role, ...live });
   };
   for (const run of scene.runs) {
     if (run.kind === 'wire') {
@@ -67,7 +68,7 @@ export function flatten({ scene, cursor }, width) {
       const shift = run.align === 'right' ? 1 - count : run.align === 'center' ? -Math.floor(count / 2) : 0;
       const from = add(run.x, shift);
       const to = run.end ? add(run.end, shift) : add(from, count);
-      paint(run.row, from, to, run.text, run.ink, 0, run.role);
+      paint(run.row, from, to, run.text, run.ink, 0, run.role, run.parts && { parts: run.parts, pad: run.pad });
     }
   }
   return rows.map((spans, row) => {
@@ -107,4 +108,4 @@ export function spanLiteral(span) {
   return Array.from({ length: count }, (_, i) => pattern[((start + i) % pattern.length + pattern.length) % pattern.length]).join('');
 }
 
-export const spanKey = (span) => `${key(span.from)}/${key(span.to)}/${key(span.origin)}/${JSON.stringify(span.ink)}/${span.role ?? ''}/${span.text}`;
+export const spanKey = (span) => `${key(span.from)}/${key(span.to)}/${key(span.origin)}/${JSON.stringify(span.ink)}/${span.role ?? ''}/${span.text}${span.parts ? JSON.stringify([span.parts, span.pad]) : ''}`;

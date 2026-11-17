@@ -24,21 +24,26 @@ export function compile(design) {
     if (!constants.has(text)) constants.set(text, `_promptly_text${constants.size + 1}`);
     return constants.get(text);
   };
+  // Native truncation counts terminal cells (including wide characters).
+  // Unroll padding conditions in the CLI; there is no prompt-time loop.
+  // `%N(l..X)` prints X only while fewer than N cells precede it, so the
+  // condition for column N draws exactly that cell, whatever the value length.
+  const reservation = (span) => {
+    const width = span.to.offset - span.from.offset;
+    if (span.from.at !== span.to.at || span.from.at !== span.origin.at || span.from.offset !== span.origin.offset || width !== span.text.length) {
+      throw new Error('Live role reservation was clipped or overpainted.');
+    }
+    return width;
+  };
+  const column = (span, cells) => {
+    const end = { ...span.from, offset: span.from.offset + cells };
+    return end.at ? '$(( ' + coordinate(end) + ' ))' : end.offset;
+  };
   function spanExpression(span) {
     if (span.role) {
-      const width = span.to.offset - span.from.offset;
-      if (span.from.at !== span.to.at || span.from.at !== span.origin.at || span.from.offset !== span.origin.offset || width !== span.text.length) {
-        throw new Error('Live role reservation was clipped or overpainted.');
-      }
-      const code = span.role === 'username' ? '%n' : '%~';
-      // Native truncation counts terminal cells (including wide characters).
-      // Unroll padding conditions in the CLI; there is no prompt-time loop.
-      const padding = Array.from({ length: width }, (_, i) => {
-        const end = { ...span.from, offset: span.from.offset + i + 1 };
-        const column = end.at ? '$(( ' + coordinate(end) + ' ))' : end.offset;
-        return `%${column}(l.. )`;
-      }).join('');
-      return `%${width}<..<${code}%<<${padding}`;
+      const width = reservation(span);
+      const padding = Array.from({ length: width }, (_, i) => `%${column(span, i + 1)}(l.. )`).join('');
+      return `%${width}<..<${span.role === 'username' ? '%n' : '%~'}%<<${padding}`;
     }
     const literal = spanLiteral(span);
     if (literal !== null) return expansionText(literal);
@@ -55,15 +60,40 @@ export function compile(design) {
     }
     return expression;
   }
+  // Hugging decoration follows the value, then the pad completes the fixed
+  // reservation. Every part prints at least one cell, so earlier columns
+  // never need a condition. Pad glyphs are escaped for the conditional; a
+  // bare `(` is literal there, while `%(` would open a nested one.
+  function huggingExpression(span, paint, trailing) {
+    const width = reservation(span);
+    let minimum = 0, text = '';
+    for (const part of span.parts) {
+      // A long name keeps its start; a long path keeps its end.
+      const code = part.role === 'username' ? `%${part.width}>..>%n%>>` : part.role ? `%${part.width}<..<%~%<<` : expansionText(part.text);
+      text += paint(part.ink, part.role || /[^ ]/.test(part.text)) + code;
+      minimum += part.role ? 1 : [...part.text].length;
+    }
+    // Nothing follows a blank pad at the end of an art row: omit it.
+    const blank = !/[^ ]/.test(span.pad.text) && (typeof span.pad.ink !== 'object' || span.pad.ink.bg == null);
+    if (trailing && blank) return text;
+    const glyphs = [...span.pad.text].map((glyph) => expansionText(glyph).replace(')', '%)'));
+    text += paint(span.pad.ink, !blank);
+    for (let cells = minimum + 1; cells <= width; cells++) {
+      const glyph = glyphs[(cells - 1) % glyphs.length];
+      const separator = glyph === '.' ? ',' : '.';
+      text += `%${column(span, cells)}(l${separator}${separator}${glyph})`;
+    }
+    return text;
+  }
   function frame(composition, width) {
     const rows = flatten(composition, width);
     const signature = rows.map((row) => row.map(spanKey).join('|')).join('\n');
     if (cache.has(signature)) return cache.get(signature);
-    const result = rows.map((row) => {
+    const result = rows.map((row, y) => {
       let ink = -1, background = null;
-      return row.map((span) => {
+      const paint = (value, visible) => {
         let color = '';
-        const style = typeof span.ink === 'object' ? span.ink : { fg: span.ink, bg: null };
+        const style = typeof value === 'object' ? value : { fg: value, bg: null };
         const bg = style.bg == null ? null : inkColor(style.bg);
         const preferred = style.fg === 'contrast' ? undefined : inkColor(style.fg ?? 2);
         // Text on a surface keeps a readable foreground. `exact` marks pixel
@@ -73,12 +103,14 @@ export function compile(design) {
           color += bg ? `%K{${bg}}` : '%k';
           background = bg;
         }
-        if ((span.role || /[^ ]/.test(span.text) || bg) && fg !== ink) {
+        if ((visible || bg) && fg !== ink) {
           color += `%F{${fg}}`;
           ink = fg;
         }
-        return color + spanExpression(span);
-      }).join('') + '%f%b%k';
+        return color;
+      };
+      return row.map((span, i) => span.parts ? huggingExpression(span, paint, y < rows.length - 1 && i === row.length - 1)
+        : paint(span.ink, span.role || /[^ ]/.test(span.text)) + spanExpression(span)).join('') + '%f%b%k';
     }).join('\n');
     cache.set(signature, result);
     return result;

@@ -29,6 +29,16 @@ export const ascii = (text) => [...text].map((c) => c.codePointAt(0) < 127 ? c :
 const glyphText = (text, mode) => mode === 'ascii' ? ascii(text) : mode === 'powerline'
   ? text.replaceAll('◖', '\ue0b6').replaceAll('◗', '\ue0b4').replaceAll('◀', '\ue0b2').replaceAll('▶', '\ue0b0') : text;
 
+function checkRole(role, width) {
+  if (!['username', 'directory'].includes(role)) throw new Error(`Unknown live role: ${role}`);
+  if (!Number.isInteger(width) || width < 2 || width > 64) throw new Error('Live role width must be 2–64 cells.');
+  return true;
+}
+function checkGlyphs(text, limit) {
+  if (typeof text !== 'string' || !text.length || [...text].length > limit || /[\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{M}\p{Emoji_Presentation}]/u.test(text)) throw new Error(`Live run glyphs must be 1–${limit} printable cells.`);
+  return text;
+}
+
 export class Scene {
   constructor(rows, glyphs = 'unicode') {
     this.rows = rows;
@@ -41,10 +51,33 @@ export class Scene {
   }
   // Live roles have a fixed cell reservation. The compiler emits only native
   // zsh prompt escapes, keeping user/path data out of shell expression source.
-  slot(row, x, role, width, ink = 2) {
-    if (!['username', 'directory'].includes(role)) throw new Error(`Unknown live role: ${role}`);
-    if (!Number.isInteger(width) || width < 2 || width > 64) throw new Error('Live role width must be 2–64 cells.');
-    this.runs.push({ kind: 'slot', row, x, role, width, text: ' '.repeat(width), ink, align: 'left', minWidth: 0 });
+  // With `options`, decoration hugs the value: `suffix` glyphs follow its last
+  // cell (truncation leaves room for them) and `pad` fills the rest of the
+  // reservation, so the gap lies outside a bracket or becomes a leader line.
+  slot(row, x, role, width, ink = 2, options) {
+    if (!options) {
+      checkRole(role, width);
+      this.runs.push({ kind: 'slot', row, x, role, width, text: ' '.repeat(width), ink, align: 'left', minWidth: 0 });
+      return this;
+    }
+    const suffix = options.suffix ? [{ text: options.suffix, ink: options.suffixInk ?? ink }] : [];
+    const live = width - suffix.reduce((n, part) => n + [...glyphText(part.text, this.glyphs)].length, 0);
+    return this.live(row, x, width, [{ role, width: live, ink }, ...suffix], { text: options.pad ?? ' ', ink: options.padInk ?? 0 });
+  }
+  // A compound live run. Literal glyphs and live values flow in order, each
+  // value truncated to its own width; `pad` then fills to the fixed end of the
+  // reservation. Pad patterns stay phase-aligned to the run's first column.
+  live(row, x, width, parts, pad = {}) {
+    if (!Number.isInteger(width) || width < 2 || width > 96) throw new Error('Live run width must be 2–96 cells.');
+    const checked = parts.map((part) => {
+      if (part.role) return checkRole(part.role, part.width) && { role: part.role, width: part.width, ink: part.ink ?? 2 };
+      return { text: checkGlyphs(glyphText(part.text, this.glyphs), 16), ink: part.ink ?? 2 };
+    });
+    const first = checked.find((part) => part.role);
+    if (!first) throw new Error('A live run needs a username or directory part.');
+    if (checked.reduce((n, part) => n + (part.width ?? [...part.text].length), 0) > width) throw new Error('Live run parts exceed their reservation.');
+    const fill = { text: checkGlyphs(glyphText(pad.text ?? ' ', this.glyphs), 8), ink: pad.ink ?? 0 };
+    this.runs.push({ kind: 'slot', row, x, role: first.role, width, text: ' '.repeat(width), ink: first.ink, align: 'left', minWidth: 0, parts: checked, pad: fill });
     return this;
   }
   fill(row, x, end, text = '─', ink = 0, minWidth = 0) {
