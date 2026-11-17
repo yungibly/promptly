@@ -22,7 +22,9 @@ const kinds = {
   // edge over the horizontal gradient. Text can sit on it.
   gradient(rng, { width, rows, colors, anchor }) {
     const deep = [mix(colors.ground, colors.stops[0], 0.55), mix(colors.ground, colors.stops[1], 0.7), mix(colors.stops.at(-1), colors.ground, 0.25)];
-    const inks = ramp(rng.chance(0.5) ? deep : [...deep].reverse(), steps(width));
+    // Unanchored beds run either way; anchored ones are brightest at the anchor.
+    const flip = rng.chance(0.5) && anchor === undefined;
+    const inks = ramp(flip ? [...deep].reverse() : deep, steps(width));
     const lift = 0.03 + rng.next() * 0.06;
     const at = anchor === undefined ? null : clamp(anchor, 0, width - 1);
     return grid(width, rows).map((line, y) => line.map((_, x) => {
@@ -49,7 +51,8 @@ const kinds = {
     const fine = rows === 1 || rng.chance(0.4), sx = fine ? 2 : 1, sy = fine ? 4 : 2;
     const w = width * sx, generations = rows * sy;
     const init = Array.from({ length: w }, () => anchor === undefined && rng.chance(0.4) ? 1 : 0);
-    if (anchor !== undefined) init[clamp(anchor, 0, width - 1) * sx] = 1;
+    // An anchor seeds one cell; a random start always keeps at least one.
+    if (anchor !== undefined || !init.includes(1)) init[anchor === undefined ? rng.int(0, w - 1) : clamp(anchor, 0, width - 1) * sx] = 1;
     let rule, history;
     for (let attempt = 0; attempt < 6; attempt++) {
       rule = rng.pick(anchor === undefined ? [30, 54, 60, 62, 86, 90, 106, 110, 122, 126, 150] : [18, 22, 26, 30, 60, 90, 102, 122, 126, 146, 150, 182]);
@@ -91,7 +94,11 @@ const kinds = {
   // Diagonal 10-PRINT, dropping out where density thins.
   maze(rng, { width, rows, colors }) {
     const inks = ramp(bright(colors), steps(width)), bias = 0.35 + rng.next() * 0.3, density = 0.7 + rng.next() * 0.3;
-    return grid(width, rows).map((line) => line.map((_, x) => rng.next() < density ? { ch: rng.next() < bias ? '╱' : '╲', fg: along(inks, x, width) } : null));
+    const tile = (x) => ({ ch: rng.next() < bias ? '╱' : '╲', fg: along(inks, x, width) });
+    const cells = grid(width, rows).map((line) => line.map((_, x) => rng.next() < density ? tile(x) : null));
+    // A narrow run never drops every tile.
+    if (!cells.flat().some(Boolean)) { const x = rng.int(0, width - 1); cells[0][x] = tile(x); }
+    return cells;
   },
   // Braille waves: four dot rows per cell row, one or two strands.
   wave(rng, { width, rows, colors, anchor }) {

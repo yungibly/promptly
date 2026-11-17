@@ -31,6 +31,18 @@ test('every texture fills its grid with one-cell glyphs and palette inks', () =>
   }
 });
 
+test('narrow textures are never empty, and anchored beds peak at the anchor', () => {
+  for (const kind of textureKinds) for (const width of [1, 2, 6]) for (const rows of [1, 2]) for (let i = 0; i < 200; i++) {
+    const cells = texture(kind, random(String(i), 'texture'), { width, rows, colors: colors('narrow') });
+    assert.ok(cells.flat().some(Boolean), `${kind} ${width}x${rows} seed ${i}: empty`);
+  }
+  const lightness = (hex) => [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
+  for (let i = 0; i < 40; i++) {
+    const bed = texture('gradient', random(String(i), 'texture'), { width: 20, rows: 1, colors: colors(`bed/${i}`), anchor: 0 });
+    assert.ok(lightness(bed[0][0].bg) >= lightness(bed[0][19].bg), `seed ${i}: bed brightens away from its anchor`);
+  }
+});
+
 test('textures are deterministic, and ASCII keeps the exact occupied cells', () => {
   for (const kind of textureKinds) for (const rows of [1, 2]) {
     const options = { width: 24, rows, colors: colors('ascii'), anchor: 5, fade: 'both' };
