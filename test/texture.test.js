@@ -43,6 +43,28 @@ test('narrow textures are never empty, and anchored beds peak at the anchor', ()
   }
 });
 
+test('one-row chains have no gap cells, and one-row waves are a single connected trace', () => {
+  for (let i = 0; i < 60; i++) {
+    for (const fade of ['none', 'right', 'both']) {
+      const [chain] = texture('truchet', random(`chain/${i}/${fade}`), { width: 6 + i % 30, rows: 1, colors: colors('chain'), fade });
+      const glyphs = chain.map((cell) => cell?.ch ?? ' ').join('').trim();
+      assert.ok(!glyphs.includes(' '), `chain ${i} ${fade}: gap inside "${glyphs}"`);
+      assert.match(glyphs, /^(?:[╭╰]─*[╮╯])*$|^─$/, `chain ${i} ${fade}: broken link "${glyphs}"`);
+    }
+    const [wave] = texture('wave', random(`trace/${i}`), { width: 8 + i % 30, rows: 1, colors: colors('wave') });
+    assert.ok(wave.every(Boolean), `wave ${i}: the trace skipped a cell`);
+    const columns = wave.flatMap((cell) => {
+      const bits = cell.ch.codePointAt(0) - 0x2800;
+      return [[0x01, 0x02, 0x04, 0x40], [0x08, 0x10, 0x20, 0x80]].map((mask) => mask.map((bit, row) => bits & bit ? row : -1).filter((row) => row >= 0));
+    });
+    // Every dot column holds one contiguous run that touches its neighbor's.
+    columns.forEach((rows, x) => {
+      assert.ok(rows.length && rows.at(-1) - rows[0] === rows.length - 1, `wave ${i}: column ${x} is not one run`);
+      if (x) assert.ok(rows[0] <= columns[x - 1].at(-1) + 1 && rows.at(-1) >= columns[x - 1][0] - 1, `wave ${i}: column ${x} detached`);
+    });
+  }
+});
+
 test('detail changes each texture without changing its footprint', () => {
   for (const kind of textureKinds) {
     const make = (detail) => texture(kind, random(`detail/${kind}`, 'texture'), { width: 30, rows: 2, colors: colors('detail'), detail });
